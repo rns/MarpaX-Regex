@@ -7,6 +7,7 @@
     - Practical general BNF parsing meets Perl regular expressions.
     - BNF at heart, extended with regex constructs, which fit BNF syntax
     - Regexp::Grammars and Parse::RecDescent without the line noise
+    - Regexp::Grammars done with BNF
         
 Synopsis
 --------
@@ -160,59 +161,6 @@ Highlights
     
         - showcase -- to be refined -- https://gist.github.com/rns/8625302
         - balanced text
-
-             perlre
-             
-                The following pattern matches a function foo() which may contain balanced parentheses as the argument.
-                $re = qr{ (                   # paren group 1 (full function)
-                            foo
-                            (                 # paren group 2 (parens)
-                              \(
-                                (             # paren group 3 (contents of parens)
-                                (?:
-                                 (?> [^()]+ ) # Non-parens without backtracking
-                                |
-                                 (?2)         # Recurse to start of paren group 2
-                                )*
-                                )
-                              \)
-                            )
-                          )
-                        }x;
-                If the pattern was used as follows
-                'foo(bar(baz)+baz(bop))'=~/$re/
-                    and print "\$1 = $1\n",
-                              "\$2 = $2\n",
-                              "\$3 = $3\n";
-                the output produced should be the following:
-                $1 = foo(bar(baz)+baz(bop))
-                $2 = (bar(baz)+baz(bop))
-                $3 = bar(baz)+baz(bop)
-
-            perlfaq6
-            
-                #!/usr/local/bin/perl5.10.0
-
-                    my $string =<<"HERE";
-                    I have some <brackets in <nested brackets> > and
-                    <another group <nested once <nested twice> > >
-                    and that's it.
-                    HERE
-
-                    my @groups = $string =~ m/
-                            (                   # start of capture group 1
-                            <                   # match an opening angle bracket
-                                (?:
-                                    [^<>]++     # one or more non angle brackets, non backtracking
-                                      |
-                                    (?1)        # found < or >, so recurse to capture group 1
-                                )*
-                            >                   # match a closing angle bracket
-                            )                   # end of capture group 1
-                            /xg;
-
-                    $" = "\n\t";
-                    print "Found:\n\t@groups\n";
 
             quote instring quote -- sl_json.t
             '[' instring ']'
