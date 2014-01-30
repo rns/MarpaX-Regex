@@ -37,7 +37,8 @@ Synopsis
 Implementation Details
 ----------------------
 
-- MarpaX-Regex-Compiler
+- MarpaX-Regex-Compiler?
+
 - 5.010 regular expressions
 - return string, not regex
 - require extended syntax
