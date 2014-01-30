@@ -48,8 +48,8 @@ Implementation Details
 - grammar source needs to be a proper string, not mere implementation of string interface (no tied vars or handles)
 
 - symbols names /^[_A-Za-z][_A-Za-z0-9]*\z/ or 'use utf8;', no locale extensions, per perlre:
+
         Currently NAME is restricted to simple identifiers only.  In other words, it must match "/^[_A-Za-z][_A-Za-z0-9]*\z/" or its Unicode extension (see utf8), though it isn't extended by the locale (see perllocale).
-        -- perlre
 
 - capturing groups
     - named (Perl) or numbered is named aren't supported (e.g. JS)
