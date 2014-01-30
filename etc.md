@@ -359,6 +359,7 @@ lexing
         [2] https://github.com/jddurand/MarpaX-Languages-ECMAScript-AST/blob/master/lib/MarpaX/Languages/ECMAScript/AST/Grammar/CharacterClasses.pm
 
 * references
+
     + origin
 
         There are a number of projects that would, I think, be quite popular and 
@@ -401,155 +402,105 @@ lexing
 
     - http://www.regular-expressions.info/
 
-    http://stackoverflow.com/questions/1435411/what-is-the-bnf-for-a-regex-in-order-to-write-a-full-or-partial-parser
+    - http://stackoverflow.com/questions/1435411/what-is-the-bnf-for-a-regex-in-order-to-write-a-full-or-partial-parser
 
-    http://www.codinghorror.com/blog/2008/06/regular-expressions-now-you-have-two-problems.html
+    - http://www.codinghorror.com/blog/2008/06/regular-expressions-now-you-have-two-problems.html
 
-    http://stackoverflow.com/questions/13816439/left-linear-and-right-linear-grammars/13945932#13945932
-    
-    * txt2regex
+    - http://stackoverflow.com/questions/13816439/left-linear-and-right-linear-grammars/13945932#13945932
 
-        # the RegEx show
+* regex BNFs
 
-        start to match
-            on the line beginning
-            in any part of the line
+    - http://www.cs.sfu.ca/~cameron/Teaching/384/99-3/regexp-plg.html
 
-        followed by"
-            any character
-            a specific character
-            a literal string
-            an allowed characters list
-            a forbidden characters list
-            a special combination
-            a POSIX combination (locale aware)
-            a ready RegEx (not implemented)
-            anything
+            <RE>     ::=     <union> | <simple-RE>
+            <union>  ::=    <RE> "|" <simple-RE>
+            <simple-RE>  ::=     <concatenation> | <basic-RE>
+            <concatenation>  ::=    <simple-RE> <basic-RE>
+            <basic-RE>   ::=     <star> | <plus> | <elementary-RE>
+            <star>   ::=    <elementary-RE> "*"
+            <plus>   ::=    <elementary-RE> "+"
+            <elementary-RE>  ::=     <group> | <any> | <eos> | <char> | <set>
+            <group>  ::=    "(" <RE> ")"
+            <any>    ::=    "."
+            <eos>    ::=    "$"
+            <char>   ::=    any non metacharacter | "\" metacharacter
+            <set>    ::=     <positive-set> | <negative-set>
+            <positive-set>   ::=    "[" <set-items> "]"
+            <negative-set>   ::=    "[^" <set-items> "]"
+            <set-items>  ::=    <set-item> | <set-item> <set-items>
+            <set-items>  ::=    <range> | <char>
+            <range>  ::=    <char> "-" <char>
 
-        how many times (repetition)"
-            one
-            zero or one (optional)
-            zero or more
-            one or more
-            exactly N
-            up to N
-            at least N
+    - http://web.archive.org/web/20090129224504/http://faqts.com/knowledge_base/view.phtml/aid/25718/fid/200               
 
-        # COMBO
-            uppercase letters
-            lowercase letters
-            numbers
-            underscore
-            space
-            TAB
+            expression = term
+                         term | expression
+            term = factor
+                   factor term
 
-        # TODO put all posix components?
-        letters
-        lowercase letters
-        uppercase letters
-        numbers
-        letters and numbers
-        hexadecimal numbers
-        whitespaces (space and TAB)
-        graphic chars (not-whitespace)
+            factor = atom
+                     atom metacharacter
 
-        # title (line 2-3)
-        or
-        open group
-        close group
+            atom = character
+                   .
+                   ( expression )
+                   [ characterclass ]
+                   [ ^ characterclass ]
+                   { min }
+                   { min ,  }
+                   { min , max }
+            characterclass = characterrange
+                             characterrange characterclass
 
-    regex BNF
+            characterrange = begincharacter
+                             begincharacter - endcharacter
 
-    <RE>     ::=     <union> | <simple-RE>
-    <union>  ::=    <RE> "|" <simple-RE>
-    <simple-RE>  ::=     <concatenation> | <basic-RE>
-    <concatenation>  ::=    <simple-RE> <basic-RE>
-    <basic-RE>   ::=     <star> | <plus> | <elementary-RE>
-    <star>   ::=    <elementary-RE> "*"
-    <plus>   ::=    <elementary-RE> "+"
-    <elementary-RE>  ::=     <group> | <any> | <eos> | <char> | <set>
-    <group>  ::=    "(" <RE> ")"
-    <any>    ::=    "."
-    <eos>    ::=    "$"
-    <char>   ::=    any non metacharacter | "\" metacharacter
-    <set>    ::=     <positive-set> | <negative-set>
-    <positive-set>   ::=    "[" <set-items> "]"
-    <negative-set>   ::=    "[^" <set-items> "]"
-    <set-items>  ::=    <set-item> | <set-item> <set-items>
-    <set-items>  ::=    <range> | <char>
-    <range>  ::=    <char> "-" <char>
+            begincharacter = character
+            endcharacter = character
 
-    http://www.cs.sfu.ca/~cameron/Teaching/384/99-3/regexp-plg.html
+            character =
+                        anycharacterexceptmetacharacters
 
-    expression = term
-                 term | expression
-    term = factor
-           factor term
+                        \ anycharacterexceptspecialcharacters
 
-    factor = atom
-             atom metacharacter
+            metacharacter = ?
+                            * {=0 or more, greedy}
+                            *? {=0 or more, non-greedy}
+                            + {=1 or more, greedy}
+                            +? {=1 or more, non-greedy}
+                            ^ {=begin of line character}
+                            $ {=end of line character}
+                            $` {=the characters to the left of the match}
+                            $' {=the characters to the right of the match}
+                            $& {=the characters that are matched}
+                            \t {=tab character}
+                            \n {=newline character}
+                            \r {=carriage return character}
+                            \f {=form feed character}
+                            \cX {=control character CTRL-X}
+                            \N {=the characters in Nth tag (if on match side)}
+                            $N{=the characters in Nth tag (if not on match side)}
+                            \NNN {=octal code for character NNN}
+                            \b {=match a 'word' boundary}
+                            \B {=match not a 'word' boundary}
+                            \d {=a digit, [0-9]}
+                            \D {=not a digit, [^0-9]}
+                            \s {=whitespace, [ \t\n\r\f]}
+                            \S {=not a whitespace, [^ \t\n\r\f]}
+                            \w {='word' character, [a-zA-Z0-9_]}
+                            \W {=not a 'word' character, [^a-zA-Z0-9_]}
+                            \Q {=put a quote (de-meta) on characters, until \E}
+                            \U {=change characters to uppercase, until \E}
+                            \L {=change characters to uppercase, until \E}
 
-    atom = character
-           .
-           ( expression )
-           [ characterclass ]
-           [ ^ characterclass ]
-           { min }
-           { min ,  }
-           { min , max }
-    characterclass = characterrange
-                     characterrange characterclass
+            min = integer
+            max = integer
+            integer = digit
+                      digit integer
 
-    characterrange = begincharacter
-                     begincharacter - endcharacter
+            anycharacter = ! " # $ % & ' ( ) * + , - . / :
+                           ; < = > ? @ [ \ ] ^ _ ` { | } ~
+                           0 1 2 3 4 5 6 7 8 9
+                           A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+                           a b c d e f g h i j k l m n o p q r s t u v w x y z
 
-    begincharacter = character
-    endcharacter = character
-
-    character =
-                anycharacterexceptmetacharacters
-
-                \ anycharacterexceptspecialcharacters
-
-    metacharacter = ?
-                    * {=0 or more, greedy}
-                    *? {=0 or more, non-greedy}
-                    + {=1 or more, greedy}
-                    +? {=1 or more, non-greedy}
-                    ^ {=begin of line character}
-                    $ {=end of line character}
-                    $` {=the characters to the left of the match}
-                    $' {=the characters to the right of the match}
-                    $& {=the characters that are matched}
-                    \t {=tab character}
-                    \n {=newline character}
-                    \r {=carriage return character}
-                    \f {=form feed character}
-                    \cX {=control character CTRL-X}
-                    \N {=the characters in Nth tag (if on match side)}
-                    $N{=the characters in Nth tag (if not on match side)}
-                    \NNN {=octal code for character NNN}
-                    \b {=match a 'word' boundary}
-                    \B {=match not a 'word' boundary}
-                    \d {=a digit, [0-9]}
-                    \D {=not a digit, [^0-9]}
-                    \s {=whitespace, [ \t\n\r\f]}
-                    \S {=not a whitespace, [^ \t\n\r\f]}
-                    \w {='word' character, [a-zA-Z0-9_]}
-                    \W {=not a 'word' character, [^a-zA-Z0-9_]}
-                    \Q {=put a quote (de-meta) on characters, until \E}
-                    \U {=change characters to uppercase, until \E}
-                    \L {=change characters to uppercase, until \E}
-
-    min = integer
-    max = integer
-    integer = digit
-              digit integer
-
-    anycharacter = ! " # $ % & ' ( ) * + , - . / :
-                   ; < = > ? @ [ \ ] ^ _ ` { | } ~
-                   0 1 2 3 4 5 6 7 8 9
-                   A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
-                   a b c d e f g h i j k l m n o p q r s t u v w x y z
-
-    http://web.archive.org/web/20090129224504/http://faqts.com/knowledge_base/view.phtml/aid/25718/fid/200               
