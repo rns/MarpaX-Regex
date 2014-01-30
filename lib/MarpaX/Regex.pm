@@ -73,9 +73,9 @@ sub walk_ast {
 1;
 
 __DATA__
-#
-# adapted from metag.bnf in Jeffrey Kegler's Marpa::R2
-#
+# This is a modification of metag.bnf file from Jeffrey Kegler's 
+# Marpa::R2 -- https://github.com/jeffreykegler/Marpa--R2
+# Here is the copyright notice from that file:
 
 # Copyright 2014 Jeffrey Kegler
 # This file is part of Marpa::R2.  Marpa::R2 is free software: you can
