@@ -49,7 +49,7 @@ Implementation Details
 
 - symbols names /^[_A-Za-z][_A-Za-z0-9]*\z/ or 'use utf8;', no locale extensions, per perlre:
 
-        Currently NAME is restricted to simple identifiers only.  In other words, it must match "/^[_A-Za-z][_A-Za-z0-9]*\z/" or its Unicode extension (see utf8), though it isn't extended by the locale (see perllocale).
+    Currently NAME is restricted to simple identifiers only.  In other words, it must match "/^[_A-Za-z][_A-Za-z0-9]*\z/" or its Unicode extension (see utf8), though it isn't extended by the locale (see perllocale).
 
 - capturing groups
     - named (Perl) or numbered is named aren't supported (e.g. JS)
