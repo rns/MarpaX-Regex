@@ -33,6 +33,11 @@ sub new {
     bless $compiler, $class;
 }
 
+sub compile{
+    my $compiler = shift;
+    my $ast = $compiler->{ast};
+}
+
 sub fmt{
     my $compiler = shift;
     my $ast = $compiler->{ast};
@@ -54,7 +59,7 @@ sub fmt{
 sub walk_ast {
     my ( $ast, $callback ) = @_;
     
-#    warn "walk_ast: ", Dumper $ast;
+    warn "walk_ast: ", Dumper $ast;
     
     if (ref $ast){
         my ($start, $length, $id, @nodes) = @$ast;
@@ -146,33 +151,17 @@ boolean ~ [01]
 
 # In single/double quotes strings and character classes
 # no escaping or internal newlines, and disallow empty string
-<single quoted string> ~ ['] <string without single quote or vertical space> ['] <character class modifiers>
+<single quoted string> ~ ['] <string without single quote or vertical space> [']
 <string without single quote or vertical space> ~ [^''\x{0A}\x{0B}\x{0C}\x{0D}\x{0085}\x{2028}\x{2029}]+
 
-<double quoted string> ~ ["] <string without double quote or vertical space> ["] <character class modifiers>
+<double quoted string> ~ ["] <string without double quote or vertical space> ["]
 <string without double quote or vertical space> ~ [^""\x{0A}\x{0B}\x{0C}\x{0D}\x{0085}\x{2028}\x{2029}]+
 
 # now we just pass through everything that is between '[' ']'
-# ?todo: <cc elements> with Perl regex charclass elements per perlre
-<character class> ~ '[' <cc elements> ']' <character class modifiers>
-<cc elements> ~ <cc element>+
-<cc element> ~ <safe cc character>
-# hex 5d is right square bracket
-<safe cc character> ~ [^\x{5d}\x{0A}\x{0B}\x{0C}\x{0D}\x{0085}\x{2028}\x{2029}]
-<cc element> ~ <escaped cc character>
-<escaped cc character> ~ '\' <horizontal character>
-<cc element> ~ <posix char class>
-<cc element> ~ <negated posix char class>
-<character class modifiers> ~ <character class modifier>*
-<character class modifier> ~ ':ic'
-<character class modifier> ~ ':i'
-
-# [=xyz=] and [.xyz.] are parsed by Perl, but then currently cause an exception.
-# Catching Perl exceptions is inconvenient for Marpa,
-# so we reject them syntactically instead.
-<posix char class> ~ '[:' <posix char class name> ':]'
-<negated posix char class> ~ '[:^' <posix char class name> ':]'
-<posix char class name> ~ [[:alnum:]]+
-
-# a horizontal character is any character that is not vertical space
-<horizontal character> ~ [^\x{A}\x{B}\x{C}\x{D}\x{2028}\x{2029}]
+# ?todo: change <character class characters> to <cc elements> 
+# with Perl regex charclass elements per perlre
+# as in metag.bnf
+<character class> ::= '[' <character class characters> ']'
+:lexeme ~ <character class characters> forgiving => 1
+<character class characters> ~ <character class character>+
+<character class character> ~ [^\]] | '\[' | '\]'
