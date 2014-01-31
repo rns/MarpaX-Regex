@@ -17,7 +17,7 @@ sub new {
     my $bnfr = Marpa::R2::Scanless::R->new( { grammar => $bnfg } );
     $bnfr->read(\$source);
 
-    say $bnfg->show_symbols(1, 'G1');
+    warn $bnfg->show_symbols(0, 'G1');
 
     my $ast = ${ $bnfr->value() };
     
@@ -44,8 +44,8 @@ sub fmt{
             $id = $compiler->{bnfg}->symbol_display_form($id);
             warn "fmt: $id: ", Dumper \@nodes;
         }
-        else{ # $id is $scalar
-            warn "fmt: scalar: '$id'";
+        else{ # $id is literal
+            warn "fmt: literal: '$id'";
         }
     } );
     return $fmt;
@@ -97,6 +97,7 @@ statement ::= <empty rule> | <alternative rule> | <quantified rule>
 <alternative rule> ::= lhs <op declare bnf> alternatives
 <empty rule> ::= lhs <op declare bnf>
 <quantified rule> ::= lhs <op declare bnf> <single symbol> quantifier <adverb list>
+<quantified rule> ::= lhs <op declare bnf> <single symbol> quantifier
 
 alternatives ::= alternative+ separator => <op alternate bnf> proper => 1
 alternative ::= rhs
@@ -110,12 +111,14 @@ alternative ::= rhs
 
 lhs ::= <symbol name>
 rhs ::= <rhs primary>+
+
 <rhs primary> ::= <single symbol>
 <rhs primary> ::= <single quoted string> | <double quoted string>
 <rhs primary> ::= <character class>
 <rhs primary> ::= <parenthesized rhs primary list>
 <parenthesized rhs primary list> ::= ('(') <rhs primary list> (')')
 <rhs primary list> ::= <rhs primary>+
+
 <single symbol> ::= symbol | <character class>
 symbol ::= <symbol name>
 <symbol name> ::= <bare name>
@@ -135,9 +138,19 @@ whitespace ~ [\s]+
 
 <op declare bnf> ~ '::='
 <op alternate bnf> ~ '|'
-quantifier ::= '*' | '+'
-
+quantifier ::= 
+        '*'  | '+'  | '?' 
+    |   '*?' | '+?' | '??' 
+    |   '{' <unsigned integer> '}' 
+    |   '{' <unsigned integer> comma '}' 
+    |   '{' <unsigned integer> comma <unsigned integer> '}'
+    |   '{' <unsigned integer> '}?' 
+    |   '{' <unsigned integer> comma '}?' 
+    |   '{' <unsigned integer> comma <unsigned integer> '}?'
+    
 boolean ~ [01]
+<unsigned integer> ~ [\d]+
+comma ~ ','
 
 <bare name> ~ [\w]+
 <bracketed name> ~ '<' <bracketed name string> '>'
