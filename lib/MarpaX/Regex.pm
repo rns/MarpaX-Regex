@@ -13,23 +13,18 @@ sub new {
     my $class = shift;
     my $source = shift;
 
-    say $source;
-
     my $bnfg = Marpa::R2::Scanless::G->new( { source => \do { local $/; <DATA> } } );
     my $bnfr = Marpa::R2::Scanless::R->new( { grammar => $bnfg } );
     $bnfr->read(\$source);
 
     say $bnfg->show_symbols(1, 'G1');
-    say $bnfg->show_symbols(1, 'L0');
-    
+
     my $ast = ${ $bnfr->value() };
-    
-#    say Dumper $ast;
     
     my $compiler = {};
     $compiler->{bnfg} = $bnfg;
     $compiler->{bnfr} = $bnfr;
-    $compiler->{ast} = $ast;
+    $compiler->{ast}  = $ast;
     bless $compiler, $class;
 }
 
@@ -47,10 +42,10 @@ sub fmt{
         my ($id, @nodes) = @_;
         if (@nodes){
             $id = $compiler->{bnfg}->symbol_display_form($id);
-            warn "callback: $id: ", Dumper \@nodes;
+            warn "fmt: $id: ", Dumper \@nodes;
         }
         else{ # $id is $scalar
-            warn "callback: scalar: '$id'";
+            warn "fmt: scalar: '$id'";
         }
     } );
     return $fmt;
@@ -59,7 +54,7 @@ sub fmt{
 sub walk_ast {
     my ( $ast, $callback ) = @_;
     
-    warn "walk_ast: ", Dumper $ast;
+#    warn "walk_ast: ", Dumper $ast;
     
     if (ref $ast){
         my ($start, $length, $id, @nodes) = @$ast;
@@ -96,7 +91,6 @@ __DATA__
 :default ::= action => [start,length,lhs,values]
 lexeme default = action => [start,length,lhs,value]
 
-:start ::= statements
 statements ::= statement+
 statement ::= <empty rule> | <alternative rule> | <quantified rule>
 
@@ -164,4 +158,4 @@ boolean ~ [01]
 <character class> ::= '[' <character class characters> ']'
 :lexeme ~ <character class characters> forgiving => 1
 <character class characters> ~ <character class character>+
-<character class character> ~ [^\]] | '\[' | '\]'
+<character class character> ~ [^\]] | '\[' | '\]' | '[:' | ':]'
