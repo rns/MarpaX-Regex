@@ -9,9 +9,6 @@ use Data::Dumper;
 $Data::Dumper::Indent = 0;
 $Data::Dumper::Terse = 1;
 
-# TODO: dirty hack -- remove
-my $metag;
-
 sub new {
     my $class = shift;
     my $source = shift;
@@ -31,7 +28,6 @@ sub new {
     
     my $compiler = {};
     $compiler->{bnfg} = $bnfg;
-    $metag = $bnfg;
     $compiler->{bnfr} = $bnfr;
     $compiler->{ast} = $ast;
     bless $compiler, $class;
@@ -58,7 +54,7 @@ sub fmt{
 sub walk_ast {
     my ( $ast, $callback ) = @_;
     
-    warn "walk_ast: ", Dumper $ast;
+#    warn "walk_ast: ", Dumper $ast;
     
     if (ref $ast){
         my ($start, $length, $id, @nodes) = @$ast;
@@ -156,6 +152,8 @@ boolean ~ [01]
 <double quoted string> ~ ["] <string without double quote or vertical space> ["] <character class modifiers>
 <string without double quote or vertical space> ~ [^""\x{0A}\x{0B}\x{0C}\x{0D}\x{0085}\x{2028}\x{2029}]+
 
+# now we just pass through everything that is between '[' ']'
+# ?todo: <cc elements> with Perl regex charclass elements per perlre
 <character class> ~ '[' <cc elements> ']' <character class modifiers>
 <cc elements> ~ <cc element>+
 <cc element> ~ <safe cc character>
