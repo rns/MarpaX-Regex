@@ -12,19 +12,28 @@ $Data::Dumper::Terse = 1;
 sub new {
     my $class = shift;
     my $source = shift;
-
-    my $bnfg = Marpa::R2::Scanless::G->new( { source => \do { local $/; <DATA> } } );
-    my $bnfr = Marpa::R2::Scanless::R->new( { grammar => $bnfg } );
-    $bnfr->read(\$source);
-
-    warn $bnfg->show_symbols(0, 'G1');
-
-    my $ast = ${ $bnfr->value() };
     
     my $compiler = {};
+
+    # read() consumes source strings so save a copy
+    my $grammar_source = $source;
+    $compiler->{grammar_source} = $grammar_source;
+    
+    # set up grammar and recognizer and parse the source grammar
+    my $bnfg = Marpa::R2::Scanless::G->new( { source => \do { local $/; <DATA> } } );
+    my $bnfr = Marpa::R2::Scanless::R->new( { grammar => $bnfg } );
+    # todo: catch exceptions and produce more user-friendly (got/expected) 
+    # error messages
+    $bnfr->read(\$source);
+    my $v = $bnfr->value();
+
+    warn $bnfg->show_symbols(0, 'G1');
+    
+    # save grammar, recognizer and AST
+    $compiler->{ast}  = ${ $v };
     $compiler->{bnfg} = $bnfg;
     $compiler->{bnfr} = $bnfr;
-    $compiler->{ast}  = $ast;
+    
     bless $compiler, $class;
 }
 
