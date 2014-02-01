@@ -2,8 +2,6 @@ use Test::More;
 
 use MarpaX::Regex;
 
-warn 1;
-
 my $bnf = MarpaX::Regex->new(<<'BNF'); # qingle quotes are important for escapes or use q{}  
 
 # comment
@@ -23,11 +21,13 @@ alt ::= s11 s12 | s21 s22
 
 <hidden empty rule lhs> ::=
 
-cc ::= [ ]
+cc ::= 'lit[a-\x]eral' [ ]
 cc ::= [a-z]
-cc ::= [a-z]*
+cc ::= [a-z] *
 cc ::= [a-z]+
 cc ::= [a-z]?
+cc ::= [a-z] * ?
+cc ::= [a-z] + ?
 cc ::= [a-z]*?
 cc ::= [a-z]+?
 cc ::= [a-z]??
@@ -36,10 +36,11 @@ cc ::= [a-z]{2,}
 cc ::= [a-z]{2,3}
 cc ::= [a-z]{2}?
 cc ::= [a-z]{2,}?
-cc ::= [a-z]{2,3}?
+cc ::= [a-z] { 2 , 3 } ?
+cc ::= [a-z]{2}+
+cc ::= [a-z]{2,}+
+cc ::= [^a-z] { 2 , 3 } +
 
 BNF
-
-warn 1;
 
 warn $bnf->fmt();

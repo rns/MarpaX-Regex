@@ -28,6 +28,32 @@ sub new {
     bless $compiler, $class;
 }
 
+# assemble all RHS's under single LHS
+# create hash for 
+#   lhs ::= literal | charclass 
+#   check for multiple lhs 
+# check for undefined and unused (unreachable and unproductive) symbols
+sub check {
+    my $compiler = shift;
+}
+
+=pod
+    bnf => 
+        start => start_lhs
+        lhs => {
+            start => \d+,
+            length => \d+,
+            [
+                [ s11, s12, ]
+                [ s21, s22 ]
+            ]
+        }            
+=cut
+
+sub to_hash{
+    my $compiler = shift;
+}
+
 sub compile{
     my $compiler = shift;
     my $ast = $compiler->{ast};
@@ -140,13 +166,17 @@ whitespace ~ [\s]+
 <op alternate bnf> ~ '|'
 quantifier ::= 
         '*'  | '+'  | '?' 
-    |   '*?' | '+?' | '??' 
+    |   '*' '?' | '+' '?' | '?' '?'
+    |   '*' '+' | '+' '+' | '?' '+'
     |   '{' <unsigned integer> '}' 
     |   '{' <unsigned integer> comma '}' 
     |   '{' <unsigned integer> comma <unsigned integer> '}'
-    |   '{' <unsigned integer> '}?' 
-    |   '{' <unsigned integer> comma '}?' 
-    |   '{' <unsigned integer> comma <unsigned integer> '}?'
+    |   '{' <unsigned integer> '}' '?'
+    |   '{' <unsigned integer> comma '}' '?'
+    |   '{' <unsigned integer> comma <unsigned integer> '}' '?'
+    |   '{' <unsigned integer> '}' '+'
+    |   '{' <unsigned integer> comma '}' '+'
+    |   '{' <unsigned integer> comma <unsigned integer> '}' '+'
     
 boolean ~ [01]
 <unsigned integer> ~ [\d]+
