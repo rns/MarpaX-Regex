@@ -29,14 +29,18 @@ sub new {
 }
 
 # assemble all RHS's under single LHS
-# create hash for 
-#   lhs ::= literal | charclass 
-#   check for multiple lhs 
-# check for undefined and unused (unreachable and unproductive) symbols
+# check and warn on undefined and unused (unreachable and unproductive) symbols
+# lexemes -- RHS is nothing but literals and charclasses
+#   lhs ::= literal | charclass | literal charclass
+#   create lexemes hash
+# when compiling
+#   if a symbol is a lexeme, replace it with its RHS
+#   and do nothing when it is met down the line
 sub check {
     my $compiler = shift;
 }
 
+# order is not important
 =pod
     bnf => 
         start => start_lhs
@@ -50,7 +54,7 @@ sub check {
         }            
 =cut
 
-sub to_hash{
+sub ast_to_hash{
     my $compiler = shift;
 }
 
