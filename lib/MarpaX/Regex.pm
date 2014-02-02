@@ -27,8 +27,6 @@ sub new {
     $bnfr->read(\$source);
     my $v = $bnfr->value();
 
-    warn $bnfg->show_symbols(0, 'G1');
-    
     # save grammar, recognizer and AST
     $compiler->{ast}  = ${ $v };
     $compiler->{bnfg} = $bnfg;
@@ -53,18 +51,30 @@ sub check {
 =pod
     bnf => 
         start => start_lhs
-        lhs => {
-            start => \d+,
-            length => \d+,
-            [
-                [ s11, s12, ]
-                [ s21, s22 ]
-            ]
-        }            
+        rules {
+            lhs => {
+                start => \d+,
+                length => \d+,
+                [
+                    [ s11, s12, { adverb => value ... } ]
+                    [ s21, s22, { } ]
+                ]
+            }            
+        },
+        symbols => {
+            symbol => [ lhs of rules where it is ]
+        }
+        lexemes => {
+            lhs => rhs # 'literal' [char-class] = 'literal' . [char-class]
+        }
 =cut
 
 sub ast_to_hash{
     my $compiler = shift;
+    
+    my $hashed_ast = {};
+    
+    return $hashed_ast;
 }
 
 sub compile{
@@ -81,7 +91,9 @@ sub fmt{
         my ($id, @nodes) = @_;
         if (@nodes){
             $id = $compiler->{bnfg}->symbol_display_form($id);
-            warn "fmt: $id: ", Dumper \@nodes;
+            my $prefix = '';
+            $prefix = "\n" if $id eq "statement";
+            warn $prefix, "fmt: $id: ", Dumper( \@nodes );
         }
         else{ # $id is literal
             warn "fmt: literal: '$id'";
@@ -133,8 +145,8 @@ lexeme default = action => [start,length,lhs,value]
 statements ::= statement+
 statement ::= <empty rule> | <alternative rule> | <quantified rule>
 
-<alternative rule> ::= lhs <op declare bnf> alternatives
 <empty rule> ::= lhs <op declare bnf>
+<alternative rule> ::= lhs <op declare bnf> alternatives
 <quantified rule> ::= lhs <op declare bnf> <single symbol> quantifier <adverb list>
 <quantified rule> ::= lhs <op declare bnf> <single symbol> quantifier
 
@@ -167,6 +179,7 @@ symbol ::= <symbol name>
 whitespace ~ [\s]+
 
 # allow comments
+# todo: passthrough comments to uses as RE's (?#)
 :discard ~ <hash comment>
 <hash comment> ~ <terminated hash comment> | <unterminated final hash comment>
 <terminated hash comment> ~ '#' <hash comment body> <vertical space char>
@@ -195,12 +208,15 @@ boolean ~ [01]
 <unsigned integer> ~ [\d]+
 comma ~ ','
 
+# todo: bracketed name perhaps needs to be bracketed_name in line with perlre's def of name 
+# "/^[_A-Za-z][_A-Za-z0-9]*\z/" or its Unicode extension (see utf8)
 <bare name> ~ [\w]+
 <bracketed name> ~ '<' <bracketed name string> '>'
 <bracketed name string> ~ [\s\w]+
 
 # In single/double quotes strings and character classes
-# no escaping or internal newlines, and disallow empty string
+# no internal newlines, and disallow empty string
+# todo: allow escaping \' \"
 <single quoted string> ~ ['] <string without single quote or vertical space> [']
 <string without single quote or vertical space> ~ [^''\x{0A}\x{0B}\x{0C}\x{0D}\x{0085}\x{2028}\x{2029}]+
 

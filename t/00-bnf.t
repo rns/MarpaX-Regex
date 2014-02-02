@@ -15,6 +15,8 @@ item1 ::= '"item1"' | "'item1'" | [item1 [:alpha:] a-zA-z ^A-Z [:digit:] \p{XPos
 
 alt ::= s11 s12 | s21 s22 
 
+alt1 ::= a11 a12 | a21 a22 
+
 <lhs with spaces> ::= <rhs symbol with spaces> | <another rhs symbol with spaces>
 
 <rhs symbol with spaces> ::= [item1 [:alpha:] [:digit:] \p{XPosixAlpha} \[ \]]+

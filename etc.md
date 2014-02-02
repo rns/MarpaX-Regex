@@ -58,6 +58,22 @@ Implementation Details
 ?- AST -- hierarchy of results via %/ hash or otherwise?
     - %+, %-, @+, @- store spans and matches of captre groups
 
+BNF Primer
+----------
+
+BNF -- a rewriting system
+-- Jeffrey Kegler om [Marpa IRC Channel](http://irclog.perlgeek.de/marpa/2014-01-15#i_8120641}
+
+a stone is a stein is a rock is a boulder is a pebble
+-- Ernest Hemingway, For Whom the Bell Tolls
+
+../cpan/lib/dev/file.c(11824) : warning C4820: '__unnamed' : '3' bytes padding added after member 'c'
+../cpan/lib/dev/file.c(12464) : warning C4100: 'param' : unreferenced formal parameter
+file.c(12538) : warning C4127: conditional expression is constant
+
+    warning ::= file ('(') line (')') (':' 'warning') code (':') message
+
+
 Syntax
 ------
     
@@ -345,11 +361,12 @@ lexing
 
     - So the basic idea of the SLIF is BNF -- a rewriting system with an alphabet of terminals, and rules which are composed of symbols. 
 
-        In a context-free grammar every rule has one LHS symbol, and zero or more RHS symbols.
-
         Add a special start symbol, and you're ready to rock 'n roll!
 
         -- Jeffrey Kegler, [Marpa IRC Channel](http://irclog.perlgeek.de/marpa/2014-01-15#i_8120641}
+
+        In a context-free grammar every rule has one LHS symbol, and zero or more RHS symbols.
+
 
     Note that a startup can be the ECMAScript pattern specification - ECMAScript implements a very low subset of perl regexp pattern, but it shows quite well how such a grammar should be structured. -- http://www.ecma-international.org/ecma-262/5.1/#sec-15.10.1
 
