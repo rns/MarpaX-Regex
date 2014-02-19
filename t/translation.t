@@ -139,11 +139,26 @@ sub tree_transducer_generate{
 #            warn "# Dumper'ed ast\n",  Dumper $ast;
             ast_ids_to_lhs($g, $ast);
 #            warn "# lhs-ed ast\n",  Dumper $ast;
-            $trees->{$name}->{$input} = $ast;
+            $trees->{$name}->{$ast->[0]} = $ast;
             last; # lhs-only
         }
     }
     warn "# trees\n", Dumper $trees;
+    my $transducers = {};
+    for my $from (sort keys %$trees){
+        for my $to (sort keys %$trees){
+            next if $from eq $to or exists $transducers->{$from}->{$to} or $transducers->{$to}->{$from};
+            warn "$from, $to";        
+            # build transducer based on lhs until rule array descriptor is available
+            # numbering -- symbols with the same names need indices to disambiguate
+            # this is needed if order of lexeme differs
+            # context -- as ast paths /lhs/lhs/lexeme
+            my $transducer = {};
+            # add lexeme AST's
+            $transducers->{$from}->{$to} = $transducer;
+        }
+    }
+    warn "# transducers\n", Dumper $transducers;
 }
 
 #
