@@ -503,6 +503,33 @@ for $s ( "saippuakauppias", "A man, a plan, a canal: Panama!" ){
 
 * regex BNFs
 
+    - http://www3.sympatico.ca/dbiggar/RE.home.html
+
+    <re> ::= <expression> { <expression> }
+                   | <re> '|' <re>
+ 
+    <expression> ::= <term>
+                   | <term> '?'
+                   | <term> '+'
+                   | <term> '*'
+ 
+          <term> ::= <label>
+                   | '(' <re> ')'
+ 
+         <label> ::= <symbol>
+                   | '[' <range> { <range> } ']'
+                   | '[' ']' { <range> } ']'
+                   | '[' '^' <range> { <range> } ']'
+                   | '[' '^' ']' { <range> } ']'
+ 
+         <range> ::= <symbol>
+                   | <symbol> '-' <symbol>
+ 
+        <symbol> ::= '.'
+                   | 0 .. n (any element of alphabet)
+                   | '\' <symbol>
+          
+          
     - http://www.cs.sfu.ca/~cameron/Teaching/384/99-3/regexp-plg.html
 
             <RE>     ::=     <union> | <simple-RE>
