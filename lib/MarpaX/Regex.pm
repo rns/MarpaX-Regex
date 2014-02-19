@@ -26,7 +26,7 @@ sub new {
     # error messages
     $bnfr->read(\$source);
     my $v = $bnfr->value();
-
+    
     # save grammar, recognizer and AST
     $compiler->{ast}  = ${ $v };
     $compiler->{bnfg} = $bnfg;
@@ -69,6 +69,35 @@ sub check {
         }
 =cut
 
+sub ast_ids_to_lhs{
+    my ($g, $ast) = @_;
+    if (ref $ast){
+        my ($id, @nodes) = @$ast;
+        $ast->[0] = $g->symbol_display_form($id);
+        map { ast_ids_to_lhs($g, $_) } @nodes unless @nodes == 1 and ref $nodes[0] eq "SCALAR";
+    }
+}
+
+# each lhs on the newline indented in 2-space increments
+# lexeme values on the same line
+sub show_ast{
+    my ($g, $ast) = @_;
+    state $depth++;
+    my $indent = "  " x ($depth - 1);
+    if (ref $ast){
+        my ($lhs, @nodes) = @$ast;
+        if (@nodes == 1 and not ref $nodes[0]){
+            say $indent, "$lhs: '$nodes[0]'";
+        }
+        else{
+            say $indent, "$lhs: ";
+            map { show_ast($g, $_) } @nodes;
+        }
+    }
+    $depth--;
+    return;
+}
+
 sub ast_to_hash{
     my $compiler = shift;
     
@@ -85,6 +114,9 @@ sub compile{
 sub fmt{
     my $compiler = shift;
     my $ast = $compiler->{ast};
+    ast_ids_to_lhs($compiler->{bnfg}, $compiler->{ast});
+    show_ast($compiler->{bnfg}, $compiler->{ast}); return;
+#    warn Dumper $ast; return;
 
     my $fmt = '';
     walk_ast( $ast, sub {
@@ -139,8 +171,11 @@ __DATA__
 # General Public License along with Marpa::R2.  If not, see
 # http://www.gnu.org/licenses/.
 
-:default ::= action => [start,length,lhs,values]
-lexeme default = action => [start,length,lhs,value]
+#:default ::= action => [start,length,lhs,values]
+#lexeme default = action => [start,length,lhs,value]
+
+:default ::= action => [lhs, values]
+lexeme default = action => [lhs, value] forgiving => 1
 
 statements ::= statement+
 statement ::= <empty rule> | <alternative rule> | <quantified rule>
