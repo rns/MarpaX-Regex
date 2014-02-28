@@ -69,15 +69,6 @@ sub check {
         }
 =cut
 
-sub ast_ids_to_lhs{
-    my ($g, $ast) = @_;
-    if (ref $ast){
-        my ($id, @nodes) = @$ast;
-        $ast->[0] = $g->symbol_display_form($id);
-        map { ast_ids_to_lhs($g, $_) } @nodes unless @nodes == 1 and ref $nodes[0] eq "SCALAR";
-    }
-}
-
 # each lhs on the newline indented in 2-space increments
 # lexeme values on the same line
 sub show_ast{
@@ -114,7 +105,6 @@ sub compile{
 sub fmt{
     my $compiler = shift;
     my $ast = $compiler->{ast};
-    ast_ids_to_lhs($compiler->{bnfg}, $compiler->{ast});
     show_ast($compiler->{bnfg}, $compiler->{ast}); return;
 #    warn Dumper $ast; return;
 
@@ -174,8 +164,8 @@ __DATA__
 #:default ::= action => [start,length,lhs,values]
 #lexeme default = action => [start,length,lhs,value]
 
-:default ::= action => [lhs, values]
-lexeme default = action => [lhs, value] forgiving => 1
+:default ::= action => [name, values]
+lexeme default = action => [name, value] forgiving => 1
 
 statements ::= statement+
 statement ::= <empty rule> | <alternative rule> | <quantified rule>
