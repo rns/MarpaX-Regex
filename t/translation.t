@@ -22,8 +22,13 @@ use Test::More;
 
 =pod Notes
 
-    A BNF is translatable if every parse tree node can have a unique id. If any rule has more than one rhs alternative, then a unique node id is 'lhs/name' otherwise the unique node id is the lhs of the rule.
+    Unique IDs of Parse Tree Nodes
 
+        If any rule has more than one rhs alternative, then a unique node id is 'lhs/name' otherwise the unique node id is the lhs of the rule.
+
+    ast_show
+        add structual elements like in st_timeflies.t that need a new line after them
+        
 =cut
 
 use Marpa::R2;
@@ -32,10 +37,11 @@ use Data::Dumper;
 $Data::Dumper::Indent = 0;
 $Data::Dumper::Terse = 1;
 
-my $tests = [
+use YAML;
+
+my $tests = {
     #    2 + 3                         -- infix
-    [   
-        'infix',
+    infix => [   
         [ '2 + 3', '2 * 3' ],
         q{
             e   ::= int plus int name => 'add' | 
@@ -46,8 +52,7 @@ my $tests = [
         }
     ],
     #    (+ 2 3)                       -- prefix
-    [   
-        'prefix',
+    prefix => [   
         [ '(+ 2 3)', '(* 2 3)' ],
         q{
             e   ::= '(' plus int int ')' name => 'add' | 
@@ -58,8 +63,7 @@ my $tests = [
         }
     ],
     #    (2 3 +)                       -- postfix
-    [   
-        'postfix',
+    postfix => [   
         [ '(2 3 +)', '(2 3 *)' ],
         q{
             e   ::= '(' int int plus ')' name => 'add' | 
@@ -72,8 +76,7 @@ my $tests = [
     #    bipush 2                      -- JVM 
     #    bipush 3 
     #    iadd 
-    [   
-        'JVM',
+    JVM => [   
         [
             q{
                 bipush 2
@@ -96,8 +99,7 @@ my $tests = [
         }
     ],
     #    the sum of 2 and 3            -- English
-    [   
-        'English',
+    English => [   
         [ 'the sum of 2 and 3', 'the product of 2 and 3' ],
         q{
             e ::= 'the' op 'of' int 'and' int
@@ -105,7 +107,7 @@ my $tests = [
             int  ~ [\d]
         }
     ],
-];
+};
 
 
 my $grammar_prolog = q{
@@ -151,11 +153,11 @@ sub ast_show_compact{
     if (ref $ast){
         my ($node_id, @children) = @$ast;
         if (@children == 1 and not ref $children[0]){
-            $s .= '(' . "$node_id '$children[0]'" . ')';
+            $s .= '[' . "'$node_id','$children[0]'" . ']';
         }
         else{
-            $s .= "($node_id ";
-            $s .= join(' ', map { ast_show_compact( $_ ) } @children) . ')';
+            $s .= "['$node_id',";
+            $s .= join(',', map { ast_show_compact( $_ ) } @children) . ']';
         }
     }
     else{
@@ -207,6 +209,37 @@ sub ast_symbol_name_to_id {
     }
 }
 
+#
+# id/id/1 => literal
+#
+sub ast_to_hash{
+    my ($ast) = @_;
+    my $h = {};
+    do_ast_to_hash( $ast, [], $h );
+    return $h;
+}
+
+sub do_ast_to_hash {
+    my ($ast, $k, $h) = @_;
+    if (ref $ast){
+        my ($node_id, @children) = @$ast;
+        push @$k, $node_id;
+        if (@children == 1 and not ref $children[0]){
+            $h->{ join '/', @$k } = $children[0];
+        }
+        else{
+            my $i;
+            map { push @$k, $i++; do_ast_to_hash( $_, $k, $h ); pop @$k } @children;
+        }
+        pop @$k;
+        
+    }
+    else{
+#        warn join('/', @$k), ' => ', $ast;
+        $h->{ join '/', @$k } = $ast;
+    }
+}
+
 sub parse{
     my ($slr, $input) = @_;
     $slr->read( \$input );
@@ -215,8 +248,70 @@ sub parse{
     return $ast;
 }
 
-for my $test (@$tests){
-    my ($name, $inputs, $grammar_source) = @$test;
+=pod
+2 + 3       ['e/add',['int','2'],['plus','+'],['int','3']]
+e/add/0/int: 2
+e/add/1/plus: +
+e/add/2/int: 3
+
+(+ 2 3)     ['e/add','(',['plus','+'],['int','2'],['int','3'],')']
+
+(+ 2 3)     ['e/add','(',['plus','+'],['int','2'],['int','3'],')']
+2 * 3       ['e/mul',['int','2'],['star','*'],['int','3']]
+(* 2 3)     ['e/mul','(',['star','*'],['int','2'],['int','3'],')']
+
+=cut
+
+my $tt = {
+    infix => {
+        prefix => {
+            'e/add' => ['e/add','(',['plus',undef],['int',undef],['int',undef],')'],
+            'e/mul' => ['e/mul','(',['star',undef],['int',undef],['int',undef],')'],
+            'e/add/1/plus' => 'e/add/1/plus',
+            'e/add/2/int' => 'e/add/0/int',
+            'e/add/3/int' => 'e/add/2/int',
+            'e/mul/1/star' => 'e/mul/1/star',
+            'e/mul/2/int' => 'e/mul/0/int',
+            'e/mul/3/int' => 'e/mul/2/int',
+        },
+    }
+};
+
+sub do_ast_translate{
+    my ($ast, $t, $h, $k) = @_;
+#    warn Dump \@_;
+    
+    if (ref $ast){
+        my ($node_id, @children) = @$ast;
+        push @$k, $node_id;
+        if (@children == 1 and not ref $children[0]){
+            $ast->[1] = $h->{ $t->{ join('/', @$k) } };
+#            warn join('/', @$k), ' => ', $ast->[1];
+        }
+        else{
+            my $i;
+            map { push @$k, $i++; do_ast_translate( $_, $t, $h, $k ); pop @$k } @children;
+        }
+        pop @$k;
+    }
+    else{
+#        warn join('/', @$k), ' => ', $ast;
+    }
+}
+
+sub ast_translate{
+    my ($ast, $t) = @_;
+
+    my $h = ast_to_hash( $ast );
+#   warn Dump $h;
+    use Storable qw(dclone);
+    my $t_ast = dclone( $t->{ $ast->[0] } );
+    do_ast_translate( $t_ast, $t, $h, [] );
+    return $t_ast;
+}
+
+for my $name (keys %$tests){
+    my ($inputs, $grammar_source) = @{ $tests->{ $name } };
     warn "#\n# $name\n#";
 #    warn $grammar_source;
     $grammar_source = $grammar_prolog . $grammar_source . $grammar_epilog;
@@ -227,16 +322,34 @@ for my $test (@$tests){
         my $r = Marpa::R2::Scanless::R->new( { grammar => $g } );
         warn "# input:\n", $input;
         my $ast = parse( $r, $input );
-        warn "# Dumper'ed ast\n",  Dumper $ast;
-        warn "# ast\n", ast_show( $ast );
-        warn "# compact ast\n", ast_show_compact( $ast );
-        
+        warn ast_show_compact( $ast );        
+        warn Dump ast_to_hash( $ast );        
         # generate string from ast (reproduce input)
         my $s = ast_derive( $ast );
         $r = Marpa::R2::Scanless::R->new( { grammar => $g } );
         my $s_ast = parse( $r, $input );
         
-        is_deeply($s_ast, $ast, "ast from generated string");
+        is_deeply($s_ast, $ast, "ast from derived string");
+        
+        # translate into other if there is the translation table
+        for my $name_to ( keys %$tests ){
+            next if $name eq $name_to;
+#            warn $name, ' => ', $name_to;
+            my $t = $tt->{$name}->{$name_to};
+            next unless defined $t;
+#            warn Dump $t;
+            my $t_ast = ast_translate( $ast, $t );
+            warn "# compact ast\n", ast_show_compact( $ast );
+            warn "# translated ast\n", ast_show_compact( $t_ast );
+            my $ts = ast_derive( $t_ast );
+#            warn $ts;
+            my $t_grammar_source = $grammar_prolog . $tests->{ $name_to }->[ 1 ] . $grammar_epilog;
+#            warn $t_grammar_source;
+            my $tg = Marpa::R2::Scanless::G->new( { source  => \$t_grammar_source } );
+            my $tr = Marpa::R2::Scanless::R->new( { grammar => $tg } );
+            my $parsed_ts_ast = parse( $tr, $ts );
+            is_deeply($parsed_ts_ast, $t_ast, "ast from string derived from translated ast");
+        }
     }
 }
 
