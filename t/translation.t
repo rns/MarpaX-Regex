@@ -274,7 +274,23 @@ my $tt = {
             'e/mul/2/int' => 'e/mul/0/int',
             'e/mul/3/int' => 'e/mul/2/int',
         },
-    }
+        postfix => {
+            'e/add' => ['e/add','(',['int',undef],['int',undef],['plus',undef],')'],
+            'e/mul' => ['e/mul','(',['int',undef],['int',undef],['star',undef],')'],
+            'e/add/1/int' => 'e/add/0/int',
+            'e/add/2/int' => 'e/add/2/int',
+            'e/add/3/plus' => 'e/add/1/plus',
+            'e/mul/1/int' => 'e/mul/0/int',
+            'e/mul/2/int' => 'e/mul/2/int',
+            'e/mul/3/star' => 'e/mul/1/star', 
+        },
+        English => {
+            'e/add' => ['e','the',['op','sum'],'of',['int',undef],'and',['int',undef]],
+            'e/mul' => ['e','the',['op','product'],'of',['int',undef],'and',['int',undef]],
+            'e/3/int' => [ 'e/add/0/int', 'e/mul/0/int' ],
+            'e/5/int' => [ 'e/add/2/int', 'e/mul/2/int' ],
+        }
+    },
 };
 
 sub do_ast_translate{
@@ -284,8 +300,17 @@ sub do_ast_translate{
     if (ref $ast){
         my ($node_id, @children) = @$ast;
         push @$k, $node_id;
-        if (@children == 1 and not ref $children[0]){
-            $ast->[1] = $h->{ $t->{ join('/', @$k) } };
+        if (@children == 1 and not ref $children[0] and not defined $children[0]){
+#            warn "key: '", join('/', @$k), "'";
+            my $s_keys = $t->{ join('/', @$k) };
+            $s_keys = [ $s_keys ] unless ref $s_keys eq "ARRAY";
+#            warn Dump $s_keys;
+            for my $s_key (@$s_keys){
+                my $tv = $h->{ $s_key };    # target value
+                next unless defined $tv;    # skip if 
+                $ast->[1] = $tv;
+            }
+            
 #            warn join('/', @$k), ' => ', $ast->[1];
         }
         else{
@@ -339,8 +364,8 @@ for my $name (keys %$tests){
             next unless defined $t;
 #            warn Dump $t;
             my $t_ast = ast_translate( $ast, $t );
-            warn "# compact ast\n", ast_show_compact( $ast );
-            warn "# translated ast\n", ast_show_compact( $t_ast );
+            warn "# source ast\n", ast_show_compact( $ast );
+            warn "# target ast\n", ast_show_compact( $t_ast );
             my $ts = ast_derive( $t_ast );
 #            warn $ts;
             my $t_grammar_source = $grammar_prolog . $tests->{ $name_to }->[ 1 ] . $grammar_epilog;
@@ -348,7 +373,7 @@ for my $name (keys %$tests){
             my $tg = Marpa::R2::Scanless::G->new( { source  => \$t_grammar_source } );
             my $tr = Marpa::R2::Scanless::R->new( { grammar => $tg } );
             my $parsed_ts_ast = parse( $tr, $ts );
-            is_deeply($parsed_ts_ast, $t_ast, "ast from string derived from translated ast");
+            is_deeply($parsed_ts_ast, $t_ast, "$name -> $name_to: ast from string derived from translated ast");
         }
     }
 }
