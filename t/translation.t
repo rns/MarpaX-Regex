@@ -6,18 +6,13 @@ use Test::More;
 
 =pod translation use case
     2 + 3                         -- infix
-    
     (+ 2 3)                       -- prefix
-  
     (2 3 +)                       -- postfix
-  
     bipush 2                      -- JVM 
     bipush 3 
     iadd 
-  
     the sum of 2 and 3            -- English
     -- http://www.cse.chalmers.se/edu/year/2012/course/DAT150/lectures/proglang-02.html
-    
 =cut
 
 =pod Notes
@@ -28,6 +23,10 @@ use Test::More;
 
     ast_show
         add structual elements like in st_timeflies.t that need a new line after them
+    todo: 
+      allow passing structural elements which need a new line after them
+      left/right space normalization
+      perhaps by postprocessing callbacks   
         
 =cut
 
@@ -40,6 +39,23 @@ $Data::Dumper::Terse = 1;
 use YAML;
 
 my $tests = {
+    # angle brackets
+    brackets => [
+        [ '< words in angle brackets>', '< words in <nested angle> brackets >' ],
+        q{
+            S ::= S S       name => 'pair' |
+                  '<' S '>' name => 'bracketed' |
+                  '<' '>'   name => 'empty bracketed' |
+                  non_parens name => 'non-bracketed'
+
+            non_parens ~ non_paren*
+            non_paren ~ [^<>]
+        },
+        [
+            ['S','<',['S',['non_parens',' words in angle brackets']],'>'],
+            ['S','<',['S',['S',['S',['non_parens',' words in ']],['S','<',['S',['non_parens','nested angle']],'>']],['S',['non_parens',' brackets ']]],'>']
+        ]
+    ],
     #    2 + 3                         -- infix
     infix => [   
         [ '2 + 3', '2 * 3' ],
@@ -49,7 +65,11 @@ my $tests = {
             int  ~ [\d]   
             plus ~ '+'
             star ~ '*'
-        }
+        },
+        [ 
+            ['e/add','(',['int','2'],['int','3'],['plus','+'],')'],
+            ['e/mul','(',['int','2'],['int','3'],['star','*'],')']
+        ]
     ],
     #    (+ 2 3)                       -- prefix
     prefix => [   
@@ -60,7 +80,11 @@ my $tests = {
             int  ~  [\d]   
             plus ~ '+'
             star ~ '*'
-        }
+        },
+        [
+            ['e/add','(',['plus','+'],['int','2'],['int','3'],')'],
+            ['e/mul','(',['star','*'],['int','2'],['int','3'],')']
+        ]
     ],
     #    (2 3 +)                       -- postfix
     postfix => [   
@@ -71,7 +95,11 @@ my $tests = {
             int  ~ [\d]   
             plus ~ '+'
             star ~ '*'
-        }
+        },
+        [
+            ['e/add','(',['int','2'],['int','3'],['plus','+'],')'],
+            ['e/mul','(',['int','2'],['int','3'],['star','*'],')']
+        ]
     ],
     #    bipush 2                      -- JVM 
     #    bipush 3 
@@ -96,7 +124,11 @@ my $tests = {
             int  ~ [\d]
             add  ~ 'iadd'
             mul  ~ 'imul'
-        }
+        },
+        [
+            ['e/add',['push','bipush',['int','2']],['push','bipush',['int','3']],['add','iadd']],
+            ['e/mul',['push','bipush',['int','2']],['push','bipush',['int','3']],['mul','imul']]
+        ]
     ],
     #    the sum of 2 and 3            -- English
     English => [   
@@ -105,7 +137,11 @@ my $tests = {
             e ::= 'the' op 'of' int 'and' int
             op ~ 'sum' name => 'add' | 'product' name => 'mul'
             int  ~ [\d]
-        }
+        },
+        [
+            ['e','the',['op','sum'],'of',['int','2'],'and',['int','3']],
+            ['e','the',['op','product'],'of',['int','2'],'and',['int','3']]
+        ]
     ],
 };
 
@@ -146,6 +182,9 @@ sub ast_show{
     return $s;
 }
 
+#
+# ast in one line
+#
 sub ast_show_compact{
     my ($ast) = @_;
     state $depth++;
@@ -198,10 +237,14 @@ sub ast_symbol_name_to_id {
     my ($ast) = @_;
     if (ref $ast){
         my ($name, $symbol, @nodes) = @$ast;
-        if ($name eq $symbol){
+        if (index($name, '/') >= 0){
+            # do nothing -- the id has already been set to $ast->[0]
+            # which is really a ref so it'll propagate
+        }
+        elsif ($name eq $symbol){ # $name and $symbol are the same -- lexeme
             $ast->[0] = $name;
         }
-        else{
+        else{ # $name and $symbol are different: RHS alternative
             $ast->[0] = "$name/$symbol";
         }
         splice @$ast, 1, 1;
@@ -240,28 +283,25 @@ sub do_ast_to_hash {
     }
 }
 
+#
+# read $input with SLIF recognizer $slr
+# get parse tree (ast)
+# convert [ symbol, name ] pairs to ast nodes' id's
+#
 sub parse{
     my ($slr, $input) = @_;
     $slr->read( \$input );
     my $ast = ${ $slr->value() };
+#    warn Dumper $ast;
+#    warn ast_show($ast);
     ast_symbol_name_to_id($ast);
     return $ast;
 }
 
-=pod
-2 + 3       ['e/add',['int','2'],['plus','+'],['int','3']]
-e/add/0/int: 2
-e/add/1/plus: +
-e/add/2/int: 3
-
-(+ 2 3)     ['e/add','(',['plus','+'],['int','2'],['int','3'],')']
-
-(+ 2 3)     ['e/add','(',['plus','+'],['int','2'],['int','3'],')']
-2 * 3       ['e/mul',['int','2'],['star','*'],['int','3']]
-(* 2 3)     ['e/mul','(',['star','*'],['int','2'],['int','3'],')']
-
-=cut
-
+#
+# source rule id => [ target parse tree with undef's showing where values are needed ]
+# 'path/to/value/in/target/parse/tree' => 'path/to/value/in/source/parse/tree'
+#
 my $tt = {
     infix => {
         prefix => {
@@ -284,6 +324,14 @@ my $tt = {
             'e/mul/2/int' => 'e/mul/2/int',
             'e/mul/3/star' => 'e/mul/1/star', 
         },
+        JVM => {
+            'e/add' => ['e/add',['push','bipush',['int',undef]],['push','bipush',['int','3']],['add','iadd']],
+            'e/mul' => ['e/mul',['push','bipush',['int',undef]],['push','bipush',['int','3']],['mul','imul']],
+            'e/mul/0/push/1/int' => 'e/mul/0/int',
+            'e/mul/1/push/1/int' => 'e/mul/2/int',
+            'e/add/0/push/1/int' => 'e/add/0/int',
+            'e/add/1/push/1/int' => 'e/add/2/int',
+        },
         English => {
             'e/add' => ['e','the',['op','sum'],'of',['int',undef],'and',['int',undef]],
             'e/mul' => ['e','the',['op','product'],'of',['int',undef],'and',['int',undef]],
@@ -302,15 +350,15 @@ sub do_ast_translate{
         push @$k, $node_id;
         if (@children == 1 and not ref $children[0] and not defined $children[0]){
 #            warn "key: '", join('/', @$k), "'";
-            my $s_keys = $t->{ join('/', @$k) };
+            my $s_keys = $t->{ join('/', @$k) }; # source keys
             $s_keys = [ $s_keys ] unless ref $s_keys eq "ARRAY";
 #            warn Dump $s_keys;
             for my $s_key (@$s_keys){
-                my $tv = $h->{ $s_key };    # target value
-                next unless defined $tv;    # skip if 
-                $ast->[1] = $tv;
+                my $tv = $h->{ $s_key };    # get target value
+                next unless defined $tv;    # skip if there is no target value 
+                                            # in source parse tree
+                $ast->[1] = $tv;            # set target value to target parse tree
             }
-            
 #            warn join('/', @$k), ' => ', $ast->[1];
         }
         else{
@@ -336,46 +384,46 @@ sub ast_translate{
 }
 
 for my $name (keys %$tests){
-    my ($inputs, $grammar_source) = @{ $tests->{ $name } };
-    warn "#\n# $name\n#";
-#    warn $grammar_source;
+    my ($inputs, $grammar_source, $trees) = @{ $tests->{ $name } };
+
     $grammar_source = $grammar_prolog . $grammar_source . $grammar_epilog;
     my $g = Marpa::R2::Scanless::G->new( { source  => \$grammar_source } );
-    for my $input (@$inputs){
+
+    for my $i (0 .. @$inputs - 1){
 
         # parse input string
+        my $input = $inputs->[ $i ];
         my $r = Marpa::R2::Scanless::R->new( { grammar => $g } );
-        warn "# input:\n", $input;
         my $ast = parse( $r, $input );
-        warn ast_show_compact( $ast );        
-        warn Dump ast_to_hash( $ast );        
-        # generate string from ast (reproduce input)
+        warn ast_show( $ast ) if $name eq 'brackets';        
+
+        # derive string from ast (must parse to the same tree as the input)
         my $s = ast_derive( $ast );
         $r = Marpa::R2::Scanless::R->new( { grammar => $g } );
         my $s_ast = parse( $r, $input );
+        warn Dump ast_to_hash($s_ast) if $name eq 'brackets';
         
-        is_deeply($s_ast, $ast, "ast from derived string");
+        is_deeply($s_ast, $ast, "$name: $s derived from parse tree");
         
         # translate into other if there is the translation table
         for my $name_to ( keys %$tests ){
+
             next if $name eq $name_to;
+
 #            warn $name, ' => ', $name_to;
             my $t = $tt->{$name}->{$name_to};
             next unless defined $t;
 #            warn Dump $t;
+
             my $t_ast = ast_translate( $ast, $t );
-            warn "# source ast\n", ast_show_compact( $ast );
-            warn "# target ast\n", ast_show_compact( $t_ast );
-            my $ts = ast_derive( $t_ast );
-#            warn $ts;
-            my $t_grammar_source = $grammar_prolog . $tests->{ $name_to }->[ 1 ] . $grammar_epilog;
-#            warn $t_grammar_source;
-            my $tg = Marpa::R2::Scanless::G->new( { source  => \$t_grammar_source } );
-            my $tr = Marpa::R2::Scanless::R->new( { grammar => $tg } );
-            my $parsed_ts_ast = parse( $tr, $ts );
-            is_deeply($parsed_ts_ast, $t_ast, "$name -> $name_to: ast from string derived from translated ast");
+            my $t_s = ast_derive( $t_ast );
+
+            is_deeply $t_ast, $tests->{ $name_to }->[ 2 ]->[ $i ], "$name -> $name_to: $s -> $t_s";
+            
         }
+
     }
+
 }
 
 done_testing();
