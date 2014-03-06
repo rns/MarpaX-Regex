@@ -4,7 +4,7 @@ use warnings;
 
 use Test::More;
 
-=pod translation use case
+=pod Use Cases
     2 + 3                         -- infix
     (+ 2 3)                       -- prefix
     (2 3 +)                       -- postfix
@@ -13,6 +13,22 @@ use Test::More;
     iadd 
     the sum of 2 and 3            -- English
     -- http://www.cse.chalmers.se/edu/year/2012/course/DAT150/lectures/proglang-02.html
+    
+    Expression ::=
+    Number
+        | '(' Expression ')' assoc => group
+       || Expression '**' Expression assoc => right
+       || Expression '*' Expression
+        | Expression '/' Expression
+       || Expression '+' Expression
+        | Expression '-' Expression
+    
+    -- https://metacpan.org/pod/distribution/Marpa-R2/pod/Scanless/DSL.pod
+    
+    A synchronous context free grammar for time normalization
+    -- http://aclweb.org/anthology//D/D13/D13-1078.pdf
+    -- https://github.com/bethard/timenorm
+    
 =cut
 
 =pod Notes
@@ -39,23 +55,48 @@ $Data::Dumper::Terse = 1;
 use YAML;
 
 my $tests = {
-    # angle brackets
-    brackets => [
-        [ '< words in angle brackets>', '< words in <nested angle> brackets >' ],
+    # typewriter double quotes (to be translated to curly (“...”) quotes) 
+    'well-formed typewriter double quotes' => [
+        [ 
+            'these are "words in typewriter double quotes" and then some', 
+            'these are "words in "nested typewriter double" quotes" and then some',  
+            'these are "words in "nested "and even mode nested" typewriter double" quotes" and then some' ],
         q{
             S ::= S S       name => 'pair' |
-                  '<' S '>' name => 'bracketed' |
-                  '<' '>'   name => 'empty bracketed' |
-                  non_parens name => 'non-bracketed'
+                  '"' S '"' name => 'quoted' |
+                  '"' '"'   name => 'empty-quoted' |
+                  non_quotes name => 'non-quoted'
 
-            non_parens ~ non_paren*
-            non_paren ~ [^<>]
+            non_quotes ~ non_quote*
+            non_quote ~ [^"] #"
         },
         [
-            ['S','<',['S',['non_parens',' words in angle brackets']],'>'],
-            ['S','<',['S',['S',['S',['non_parens',' words in ']],['S','<',['S',['non_parens','nested angle']],'>']],['S',['non_parens',' brackets ']]],'>']
+            ['S','"',['S',['non_quotes',' words in typewriter double quotes']],'"'],
+            ['S','"',['S',['S',['S',['non_quotes',' words in ']],['S','"',['S',['non_quotes','nested angle']],'"']],['S',['non_quotes',' quotes ']]],'"'],
+            ['S/quoted','"',['S/pair',['S/pair',['S/non-quoted',['non_quotes',' words in ']],['S/quoted','"',['S/pair',['S/pair',['S/non-quoted',['non_quotes','nested ']],['S/quoted','"',['S/non-quoted',['non_quotes','and even mode nested']],'"']],['S/non-quoted',['non_quotes',' angle']]],'"']],['S/non-quoted',['non_quotes',' quotes ']]],'"']
         ]
-    ],
+    ], 
+    # curly double quotes
+    'well-formed curly double quotes' => [
+        [ 
+            'these are “words in curly double quotes” and then some', 
+            'these are “words in “nested curly double” quotes” and then some',  
+            'these are “words in “nested “and even mode nested” curly double” quotes” and then some' ],
+        q{
+            S ::= S S       name => 'pair' |
+                  '“' S '”' name => 'quoted' |
+                  '“' '”'   name => 'empty-quoted' |
+                  non_quotes name => 'non-quoted'
+
+            non_quotes ~ non_quote*
+            non_quote ~ [^“”] #"
+        },
+        [
+            ['S','"',['S',['non_quotes',' words in curly double quotes']],'"'],
+            ['S','"',['S',['S',['S',['non_quotes',' words in ']],['S','"',['S',['non_quotes','nested angle']],'"']],['S',['non_quotes',' quotes ']]],'"'],
+            ['S/quoted','"',['S/pair',['S/pair',['S/non-quoted',['non_quotes',' words in ']],['S/quoted','"',['S/pair',['S/pair',['S/non-quoted',['non_quotes','nested ']],['S/quoted','"',['S/non-quoted',['non_quotes','and even mode nested']],'"']],['S/non-quoted',['non_quotes',' angle']]],'"']],['S/non-quoted',['non_quotes',' quotes ']]],'"']
+        ]
+    ], 
     #    2 + 3                         -- infix
     infix => [   
         [ '2 + 3', '2 * 3' ],
@@ -302,7 +343,70 @@ sub parse{
 # source rule id => [ target parse tree with undef's showing where values are needed ]
 # 'path/to/value/in/target/parse/tree' => 'path/to/value/in/source/parse/tree'
 #
+=pod        
+            S ::= S S       name => 'pair' |
+                  '"' S '"' name => 'quoted' |
+                  '"' '"'   name => 'empty-quoted' |
+                  non_quotes name => 'non-quoted'
+
+['S/pair',['S/pair',['S/non-quoted',['non_quotes','these are ']],['S/quoted','"',['S/non-quoted',['non_quotes','words in curly double quotes']],'"']],['S/non-quoted',['non_quotes',' and then some']]]
+---
+S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
+S/pair/0/S/pair/1/S/quoted/0: '"'
+S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: words in curly double quotes
+S/pair/0/S/pair/1/S/quoted/2: '"'
+S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
+                  
+['S/pair',['S/pair',['S/pair',['S/pair',['S/non-quoted',['non_quotes','these are ']],['S/quoted','"',['S/non-quoted',['non_quotes','words in ']],'"']],['S/non-quoted',['non_quotes','nested curly double']]],['S/quoted','"',['S/non-quoted',['non_quotes',' quotes']],'"']],['S/non-quoted',['non_quotes',' and then some']]] at C:\cygwin\home\Ruslan\MarpaX-Regex\t\translation.t line 451.
+---
+S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
+S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/0: '"'
+S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: 'words in '
+S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/2: '"'
+S/pair/0/S/pair/0/S/pair/1/S/non-quoted/0/non_quotes: nested curly double
+S/pair/0/S/pair/1/S/quoted/0: '"'
+S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: ' quotes'
+S/pair/0/S/pair/1/S/quoted/2: '"'
+S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
+
+['S/pair',['S/pair',['S/pair',['S/pair',['S/pair',['S/pair',['S/non-quoted',['non_quotes','these are ']],['S/quoted','"',['S/non-quoted',['non_quotes','words in ']],'"']],['S/non-quoted',['non_quotes','nested ']]],['S/quoted','"',['S/non-quoted',['non_quotes','and even mode nested']],'"']],['S/non-quoted',['non_quotes',' curly double']]],['S/quoted','"',['S/non-quoted',['non_quotes',' quotes']],'"']],['S/non-quoted',['non_quotes',' and then some']]] at C:\cygwin\home\Ruslan\MarpaX-Regex\t\translation.t line 451.
+---
+S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
+S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/0: '"'
+S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: 'words in '
+S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/2: '"'
+S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/non-quoted/0/non_quotes: 'nested '
+S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/0: '"'
+S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: and even mode nested
+S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/2: '"'
+S/pair/0/S/pair/0/S/pair/1/S/non-quoted/0/non_quotes: ' curly double'
+S/pair/0/S/pair/1/S/quoted/0: '"'
+S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: ' quotes'
+S/pair/0/S/pair/1/S/quoted/2: '"'
+S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
+
+            S ::= S S       name => 'pair' |
+                  '"' S '"' name => 'quoted' |
+                  '"' '"'   name => 'empty-quoted' |
+                  non_quotes name => 'non-quoted'
+
+=cut            
 my $tt = {
+    'well-formed typewriter double quotes' => {
+#        'well-formed curly double quotes' => {
+#            this will be applied in this order until prefix isn't found   
+#            'S/pair' => [ 
+#                [ 'S/pair' ], 
+#                [ 'S/quoted' ], 
+#                [ 'S/empty-quoted' ], 
+#                [ 'S/non-quoted' ] 
+#             ],
+#            # rules for alternatives as terminals
+#            'S/quoted' => 
+#            'S/empty-quoted' => 
+#            'S/non-quoted' => ['S/non-quoted',['non_quotes',undef]],
+#        }
+    },
     infix => {
         prefix => {
             'e/add' => ['e/add','(',['plus',undef],['int',undef],['int',undef],')'],
@@ -348,20 +452,29 @@ sub do_ast_translate{
     if (ref $ast){
         my ($node_id, @children) = @$ast;
         push @$k, $node_id;
+        # handle terminals
         if (@children == 1 and not ref $children[0] and not defined $children[0]){
 #            warn "key: '", join('/', @$k), "'";
             my $s_keys = $t->{ join('/', @$k) }; # source keys
             $s_keys = [ $s_keys ] unless ref $s_keys eq "ARRAY";
 #            warn Dump $s_keys;
             for my $s_key (@$s_keys){
+                # todo: there must be only one target value
                 my $tv = $h->{ $s_key };    # get target value
                 next unless defined $tv;    # skip if there is no target value 
                                             # in source parse tree
                 $ast->[1] = $tv;            # set target value to target parse tree
             }
+            # keys are for terminals; if no key is found, 
+            # the tree must be built further
+            # to augment the key
+            
 #            warn join('/', @$k), ' => ', $ast->[1];
         }
+        # handle non-terminals
         else{
+            # try rhs alternatives as $s_key prefix search in $h by regexp
+            #
             my $i;
             map { push @$k, $i++; do_ast_translate( $_, $t, $h, $k ); pop @$k } @children;
         }
@@ -383,7 +496,7 @@ sub ast_translate{
     return $t_ast;
 }
 
-for my $name (keys %$tests){
+for my $name (sort keys %$tests){
     my ($inputs, $grammar_source, $trees) = @{ $tests->{ $name } };
 
     $grammar_source = $grammar_prolog . $grammar_source . $grammar_epilog;
@@ -395,15 +508,16 @@ for my $name (keys %$tests){
         my $input = $inputs->[ $i ];
         my $r = Marpa::R2::Scanless::R->new( { grammar => $g } );
         my $ast = parse( $r, $input );
-        warn ast_show( $ast ) if $name eq 'brackets';        
+        warn ast_show( $ast ) if $name =~ /double quote/;
+        warn ast_show_compact( $ast ) if $name =~ /double quote/;
 
         # derive string from ast (must parse to the same tree as the input)
         my $s = ast_derive( $ast );
         $r = Marpa::R2::Scanless::R->new( { grammar => $g } );
         my $s_ast = parse( $r, $input );
-        warn Dump ast_to_hash($s_ast) if $name eq 'brackets';
+        warn Dump ast_to_hash($s_ast) if $name =~ /double quote/;
         
-        is_deeply($s_ast, $ast, "$name: $s derived from parse tree");
+        is_deeply($s_ast, $ast, "$name: '$s' derived from parse tree");
         
         # translate into other if there is the translation table
         for my $name_to ( keys %$tests ){
