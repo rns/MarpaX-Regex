@@ -5,6 +5,7 @@ use warnings;
 use Test::More;
 
 =pod Use Cases
+
     2 + 3                         -- infix
     (+ 2 3)                       -- prefix
     (2 3 +)                       -- postfix
@@ -28,6 +29,8 @@ use Test::More;
     A synchronous context free grammar for time normalization
     -- http://aclweb.org/anthology//D/D13/D13-1078.pdf
     -- https://github.com/bethard/timenorm
+    
+    Marpa <-> Perl Regexes
     
 =cut
 
@@ -294,6 +297,62 @@ sub ast_symbol_name_to_id {
 }
 
 #
+# turn a hash produced by ast_to_hash() back to an ast
+#
+sub hash_to_ast{
+    my ($hash) = @_;
+    
+#    warn "hash_to_ast:";
+#    warn Dump $hash;
+
+    my $ast = [ ];
+    
+    for my $path (sort keys %$hash){
+
+#        warn "\npath:  ", $path, ": '$hash->{ $path }'";
+
+        my @path = split q{/(\d+)/?}, $path;
+#        warn "split: ", join ' ', @path;
+        
+        # a path can end in either named or unnamed terminal
+        # that must become the value of the last node (array item at index $i)
+        my $value;
+        if ( @path % 2 == 0 ){
+            $value = $hash->{ $path };
+        }
+        else{
+            $value = [ pop @path, $hash->{ $path } ];
+        }
+#        warn "value: ", Dump $value;
+
+#        warn "Odd number of items in path: ", scalar(@path) unless @path % 2 == 0;
+        
+        my $node = $ast;
+        for ( my $ix = 0; $ix <= $#path; $ix += 2 ) {
+            my $name = $path[$ix];      # node's name
+            my $i    = $path[$ix + 1];  # index in the array of node's values 
+#            warn "    $name @ $i";
+#            warn "    $ix, $#path: ", Dump $node;
+            $node->[ 0 ] = $name;
+            if ($ix == $#path - 1){ # last node 
+                $node->[ $i + 1 ] = $value;
+            }
+            else{ # next node
+                unless ( defined $node->[ $i + 1 ] ){ # avoid re-initializing the node
+                    $node->[ $i + 1] = [];
+                }
+                $node = $node->[ $i + 1 ];
+            }
+        }
+    }
+#    warn Dump $ast;
+#    warn "# re-created from hash: ";
+#    warn ast_show( $ast );
+#    warn ast_show_compact( $ast );
+    return $ast;
+}
+
+#
 # id/id/1 => literal
 #
 sub ast_to_hash{
@@ -339,73 +398,183 @@ sub parse{
     return $ast;
 }
 
-#
-# source rule id => [ target parse tree with undef's showing where values are needed ]
-# 'path/to/value/in/target/parse/tree' => 'path/to/value/in/source/parse/tree'
-#
-=pod        
-            S ::= S S       name => 'pair' |
-                  '"' S '"' name => 'quoted' |
-                  '"' '"'   name => 'empty-quoted' |
-                  non_quotes name => 'non-quoted'
 
-['S/pair',['S/pair',['S/non-quoted',['non_quotes','these are ']],['S/quoted','"',['S/non-quoted',['non_quotes','words in curly double quotes']],'"']],['S/non-quoted',['non_quotes',' and then some']]]
----
+my $tt_test = {
+    'infix' => {
+        'postfix' => {
+            '' => { 
+                'e/add/0' => '(',
+                'e/mul/0' => '(',
+                'e/add/4' => ')',
+                'e/mul/4' => ')',
+            }
+        }
+    }
+};
+warn Dump $tt_test;
+
+#
+# Translation Table
+#
+=pod Translation Table format       
+    
+# source ast path and values
+$tt->{ $source_id }->{ $target_id } = {
+    
+}
+
+# $tt -> { infix } -> { postfix }
+
+# scalar => scalar 
+#   source_path => target_path -- 
+#       copy value from source_path in the source ast to target_path in the target ast
+'e/add/0/int'   => 'e/add/1/int',
+'e/add/2/int'   => 'e/add/2/int',
+'e/add/1/plus'  => 'e/add/3/plus',
+'e/mul/1/star' => 'e/mul/3/star',
+
+# '' => hash_ref
+#   empty string (no such key in source ast):
+#       copy the paths and values from the hash ref to the target ast
+'' => { 
+    'e/add/0' => '(',
+    'e/mul/0' => '(',
+    'e/add/4' => ')',
+    'e/mul/4' => ')',
+}
+
+# not exists $t->{$source_ast_path} 
+#   source ast path not found in translation table:
+#       copy it and its value to the target ast
+
+# scalar => hash_ref
+#   ???
+source_path => { target_path => target_value }
+
+# scalar => array_ref
+#   ???
+source_path => [ target_path => target_value ]
+
+# regex => array_ref
+source_path_search_regex => [ path_replace_regex, value_replace_regex ]
+
+# scalar => code_ref
+#   call code_ref->($path, $value) on path eq $scalar
+#   and copy the resulting hash ref to the target ast
+source_path => code_ref
+
+# regex => code_ref
+#   call code_ref on source ast' paths matching $path_search_regex
+#   and copy the resulting hash ref to the target ast
+source_path_search_regex => code_ref
+
+# ==========================================================
+# ========================== ASTs ==========================
+# ==========================================================
+
+# English
+
+e/0: the
+e/1/op: sum
+e/2: of
+e/3/int: 2
+e/4: and
+e/5/int: 3
+
+e/0: the
+e/1/op: product
+e/2: of
+e/3/int: 2
+e/4: and
+e/5/int: 3
+
+# JVM
+
+e/add/0/push/0: bipush
+e/add/0/push/1/int: 2
+e/add/1/push/0: bipush
+e/add/1/push/1/int: 3
+e/add/2/add: iadd
+
+e/mul/0/push/0: bipush
+e/mul/0/push/1/int: 2
+e/mul/1/push/0: bipush
+e/mul/1/push/1/int: 3
+e/mul/2/mul: imul
+
+# infix
+
+e/add/0/int: 2
+e/add/1/plus: +
+e/add/2/int: 3
+
+e/mul/0/int: 2
+e/mul/1/star: '*'
+e/mul/2/int: 3
+
+# postfix
+
+e/add/0: (
+e/add/1/int: 2
+e/add/2/int: 3
+e/add/3/plus: +
+e/add/4: )
+
+e/mul/0: (
+e/mul/1/int: 2
+e/mul/2/int: 3
+e/mul/3/star: '*'
+e/mul/4: )
+
+# prefix
+
+e/add/0: (
+e/add/1/plus: +
+e/add/2/int: 2
+e/add/3/int: 3
+e/add/4: )
+
+e/mul/0: (
+e/mul/1/star: '*'
+e/mul/2/int: 2
+e/mul/3/int: 3
+e/mul/4: )
+
+# well-formed curly double quotes
+
 S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
-S/pair/0/S/pair/1/S/quoted/0: '"'
+S/pair/0/S/pair/1/S/quoted/0: вЂњ
 S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: words in curly double quotes
-S/pair/0/S/pair/1/S/quoted/2: '"'
-S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
-                  
-['S/pair',['S/pair',['S/pair',['S/pair',['S/non-quoted',['non_quotes','these are ']],['S/quoted','"',['S/non-quoted',['non_quotes','words in ']],'"']],['S/non-quoted',['non_quotes','nested curly double']]],['S/quoted','"',['S/non-quoted',['non_quotes',' quotes']],'"']],['S/non-quoted',['non_quotes',' and then some']]] at C:\cygwin\home\Ruslan\MarpaX-Regex\t\translation.t line 451.
----
-S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
-S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/0: '"'
-S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: 'words in '
-S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/2: '"'
-S/pair/0/S/pair/0/S/pair/1/S/non-quoted/0/non_quotes: nested curly double
-S/pair/0/S/pair/1/S/quoted/0: '"'
-S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: ' quotes'
-S/pair/0/S/pair/1/S/quoted/2: '"'
+S/pair/0/S/pair/1/S/quoted/2: вЂќ
 S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
 
-['S/pair',['S/pair',['S/pair',['S/pair',['S/pair',['S/pair',['S/non-quoted',['non_quotes','these are ']],['S/quoted','"',['S/non-quoted',['non_quotes','words in ']],'"']],['S/non-quoted',['non_quotes','nested ']]],['S/quoted','"',['S/non-quoted',['non_quotes','and even mode nested']],'"']],['S/non-quoted',['non_quotes',' curly double']]],['S/quoted','"',['S/non-quoted',['non_quotes',' quotes']],'"']],['S/non-quoted',['non_quotes',' and then some']]] at C:\cygwin\home\Ruslan\MarpaX-Regex\t\translation.t line 451.
----
-S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
-S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/0: '"'
-S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: 'words in '
-S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/2: '"'
-S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/non-quoted/0/non_quotes: 'nested '
-S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/0: '"'
-S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: and even mode nested
-S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/2: '"'
-S/pair/0/S/pair/0/S/pair/1/S/non-quoted/0/non_quotes: ' curly double'
-S/pair/0/S/pair/1/S/quoted/0: '"'
-S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: ' quotes'
-S/pair/0/S/pair/1/S/quoted/2: '"'
+S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
+S/pair/0/S/pair/1/S/quoted/0: вЂњ
+S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'words in '
+S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/0: вЂњ
+S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: nested curly double
+S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/2: вЂќ
+S/pair/0/S/pair/1/S/quoted/1/S/pair/1/S/non-quoted/0/non_quotes: ' quotes'
+S/pair/0/S/pair/1/S/quoted/2: вЂќ
 S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
 
-            S ::= S S       name => 'pair' |
-                  '"' S '"' name => 'quoted' |
-                  '"' '"'   name => 'empty-quoted' |
-                  non_quotes name => 'non-quoted'
-
+S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
+S/pair/0/S/pair/1/S/quoted/0: вЂњ
+S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'words in '
+S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/0: вЂњ
+S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'nested '
+S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/0: вЂњ
+S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: and even mode nested
+S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/2: вЂќ
+S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/pair/1/S/non-quoted/0/non_quotes: ' curly double'
+S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/2: вЂќ
+S/pair/0/S/pair/1/S/quoted/1/S/pair/1/S/non-quoted/0/non_quotes: ' quotes'
+S/pair/0/S/pair/1/S/quoted/2: вЂќ
+S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
+    
 =cut            
 my $tt = {
     'well-formed typewriter double quotes' => {
-#        'well-formed curly double quotes' => {
-#            this will be applied in this order until prefix isn't found   
-#            'S/pair' => [ 
-#                [ 'S/pair' ], 
-#                [ 'S/quoted' ], 
-#                [ 'S/empty-quoted' ], 
-#                [ 'S/non-quoted' ] 
-#             ],
-#            # rules for alternatives as terminals
-#            'S/quoted' => 
-#            'S/empty-quoted' => 
-#            'S/non-quoted' => ['S/non-quoted',['non_quotes',undef]],
-#        }
     },
     infix => {
         prefix => {
@@ -501,38 +670,47 @@ for my $name (sort keys %$tests){
 
     $grammar_source = $grammar_prolog . $grammar_source . $grammar_epilog;
     my $g = Marpa::R2::Scanless::G->new( { source  => \$grammar_source } );
-
+    
     for my $i (0 .. @$inputs - 1){
 
+        diag "\n", $name;
+        
         # parse input string
         my $input = $inputs->[ $i ];
         my $r = Marpa::R2::Scanless::R->new( { grammar => $g } );
         my $ast = parse( $r, $input );
-        warn ast_show( $ast ) if $name =~ /double quote/;
-        warn ast_show_compact( $ast ) if $name =~ /double quote/;
 
         # derive string from ast (must parse to the same tree as the input)
         my $s = ast_derive( $ast );
         $r = Marpa::R2::Scanless::R->new( { grammar => $g } );
         my $s_ast = parse( $r, $input );
-        warn Dump ast_to_hash($s_ast) if $name =~ /double quote/;
+
+        is_deeply($s_ast, $ast, "'$s' derived from parse tree");
         
-        is_deeply($s_ast, $ast, "$name: '$s' derived from parse tree");
+        # serialize/deserialize ast from/to hash of paths
+        my $hash_ast = ast_to_hash($s_ast) ;
+        # deserialized ast
+        my $ds_ast = hash_to_ast($hash_ast);
         
+#        warn Dump $hash_ast;
+        
+        is_deeply($ds_ast, $s_ast, "ast re-created from hash");
+
         # translate into other if there is the translation table
         for my $name_to ( keys %$tests ){
 
             next if $name eq $name_to;
 
-#            warn $name, ' => ', $name_to;
             my $t = $tt->{$name}->{$name_to};
             next unless defined $t;
+
+            diag ' ' x length($name), ' => ', $name_to;
 #            warn Dump $t;
 
             my $t_ast = ast_translate( $ast, $t );
             my $t_s = ast_derive( $t_ast );
 
-            is_deeply $t_ast, $tests->{ $name_to }->[ 2 ]->[ $i ], "$name -> $name_to: $s -> $t_s";
+            is_deeply $t_ast, $tests->{ $name_to }->[ 2 ]->[ $i ], "$s -> $t_s";
             
         }
 
