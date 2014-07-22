@@ -4,6 +4,8 @@ use warnings;
 
 use Test::More;
 
+use Scalar::Util qw( reftype );
+
 =pod Use Cases
 
     2 + 3                         -- infix
@@ -304,7 +306,7 @@ sub hash_to_ast{
     
 #    warn "hash_to_ast:";
 #    warn Dump $hash;
-
+    
     my $ast = [ ];
     
     for my $path (sort keys %$hash){
@@ -399,20 +401,6 @@ sub parse{
 }
 
 
-my $tt_test = {
-    'infix' => {
-        'postfix' => {
-            '' => { 
-                'e/add/0' => '(',
-                'e/mul/0' => '(',
-                'e/add/4' => ')',
-                'e/mul/4' => ')',
-            }
-        }
-    }
-};
-warn Dump $tt_test;
-
 #
 # Translation Table
 #
@@ -436,6 +424,9 @@ $tt->{ $source_id }->{ $target_id } = {
 # '' => hash_ref
 #   empty string (no such key in source ast):
 #       copy the paths and values from the hash ref to the target ast
+#   if 'add missing paths' key exists in %$hash_ref
+#       the keys from the source ast hash missing in the translatino table will be
+#       added to the target ast hash
 '' => { 
     'e/add/0' => '(',
     'e/mul/0' => '(',
@@ -573,95 +564,158 @@ S/pair/0/S/pair/1/S/quoted/2: вЂќ
 S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
     
 =cut            
+
+# Translation Table proper
 my $tt = {
     'well-formed typewriter double quotes' => {
     },
     infix => {
-        prefix => {
-            'e/add' => ['e/add','(',['plus',undef],['int',undef],['int',undef],')'],
-            'e/mul' => ['e/mul','(',['star',undef],['int',undef],['int',undef],')'],
-            'e/add/1/plus' => 'e/add/1/plus',
-            'e/add/2/int' => 'e/add/0/int',
-            'e/add/3/int' => 'e/add/2/int',
-            'e/mul/1/star' => 'e/mul/1/star',
-            'e/mul/2/int' => 'e/mul/0/int',
-            'e/mul/3/int' => 'e/mul/2/int',
-        },
         postfix => {
-            'e/add' => ['e/add','(',['int',undef],['int',undef],['plus',undef],')'],
-            'e/mul' => ['e/mul','(',['int',undef],['int',undef],['star',undef],')'],
-            'e/add/1/int' => 'e/add/0/int',
-            'e/add/2/int' => 'e/add/2/int',
-            'e/add/3/plus' => 'e/add/1/plus',
-            'e/mul/1/int' => 'e/mul/0/int',
-            'e/mul/2/int' => 'e/mul/2/int',
-            'e/mul/3/star' => 'e/mul/1/star', 
+            # source ast's rule id
+            'e/add' => { 
+                # source ast path to value => target ast path
+                'e/add/0/int'   => 'e/add/1/int',
+                'e/add/2/int'   => 'e/add/2/int',
+                'e/add/1/plus'  => 'e/add/3/plus',
+            },
+            'e/mul' => {
+                'e/mul/0/int'   => 'e/mul/1/int',
+                'e/mul/2/int'   => 'e/mul/2/int',
+                'e/mul/1/star' => 'e/mul/3/star',
+            },
+            # no such path in source tree: add to target tree based on rule id
+            '' => { 
+                # source ast's rule id
+                'e/add' => { 
+                    # target ast path => target ast value
+                    'e/add/0' => '(',
+                    'e/add/4' => ')',
+                },
+                'e/mul' => {
+                    'e/mul/0' => '(',
+                    'e/mul/4' => ')',
+                }
+            }
+        },
+        prefix => {
         },
         JVM => {
-            'e/add' => ['e/add',['push','bipush',['int',undef]],['push','bipush',['int','3']],['add','iadd']],
-            'e/mul' => ['e/mul',['push','bipush',['int',undef]],['push','bipush',['int','3']],['mul','imul']],
-            'e/mul/0/push/1/int' => 'e/mul/0/int',
-            'e/mul/1/push/1/int' => 'e/mul/2/int',
-            'e/add/0/push/1/int' => 'e/add/0/int',
-            'e/add/1/push/1/int' => 'e/add/2/int',
         },
         English => {
-            'e/add' => ['e','the',['op','sum'],'of',['int',undef],'and',['int',undef]],
-            'e/mul' => ['e','the',['op','product'],'of',['int',undef],'and',['int',undef]],
-            'e/3/int' => [ 'e/add/0/int', 'e/mul/0/int' ],
-            'e/5/int' => [ 'e/add/2/int', 'e/mul/2/int' ],
         }
     },
 };
 
-sub do_ast_translate{
-    my ($ast, $t, $h, $k) = @_;
-#    warn Dump \@_;
+# break paths into hashes based on rule id's
+sub hash_ast_by_rule_id{
+    my ($h_ast) = @_;
+
+#    warn "hash_ast_by_rule_id:";
     
-    if (ref $ast){
-        my ($node_id, @children) = @$ast;
-        push @$k, $node_id;
-        # handle terminals
-        if (@children == 1 and not ref $children[0] and not defined $children[0]){
-#            warn "key: '", join('/', @$k), "'";
-            my $s_keys = $t->{ join('/', @$k) }; # source keys
-            $s_keys = [ $s_keys ] unless ref $s_keys eq "ARRAY";
-#            warn Dump $s_keys;
-            for my $s_key (@$s_keys){
-                # todo: there must be only one target value
-                my $tv = $h->{ $s_key };    # get target value
-                next unless defined $tv;    # skip if there is no target value 
-                                            # in source parse tree
-                $ast->[1] = $tv;            # set target value to target parse tree
-            }
-            # keys are for terminals; if no key is found, 
-            # the tree must be built further
-            # to augment the key
-            
-#            warn join('/', @$k), ' => ', $ast->[1];
+    my $h_ast_r_id = {};
+    my $rule_id = '';
+
+    while ( my ($path, $value) = each %$h_ast ){
+
+        # get the rule id (from the start until the second '/')
+        # unless it's the same
+        unless ( index ( $path, $rule_id . '/' ) == 0 ){
+            $rule_id = substr $path, 0, index( $path, '/', index ( $path, '/' ) + 1 );
         }
-        # handle non-terminals
-        else{
-            # try rhs alternatives as $s_key prefix search in $h by regexp
-            #
-            my $i;
-            map { push @$k, $i++; do_ast_translate( $_, $t, $h, $k ); pop @$k } @children;
-        }
-        pop @$k;
+
+#        warn $rule_id;
+
+        # set path to rule_id-based hash
+        $h_ast_r_id->{ $rule_id }->{ $path } = $h_ast->{ $path };
     }
-    else{
-#        warn join('/', @$k), ' => ', $ast;
-    }
+    
+#    warn Dump $h_ast_r_id;
+    
+    return $h_ast_r_id;
 }
 
-sub ast_translate{
-    my ($ast, $t) = @_;
+# Build target ast hash from source ast hash $h_s_ast and
+# translation table $t
+sub hash_ast_translate{
+    my ($h_s_ast, $t) = @_;
 
-    my $h = ast_to_hash( $ast );
-#   warn Dump $h;
-    use Storable qw(dclone);
-    my $t_ast = dclone( $t->{ $ast->[0] } );
-    do_ast_translate( $t_ast, $t, $h, [] );
+    warn "hash_ast_translate";
+    warn "# source ast", Dump $h_s_ast;
+    warn "# table", Dump $t;
+    
+    # sort source ast hash by rule id's
+    $h_s_ast = hash_ast_by_rule_id( $h_s_ast );
+    
+    my $h_t_ast = {};
+    
+    # handle empty keys (adding)
+    if ( exists $t->{ '' } ){
+        my $add_entries = $t->{ '' };
+        warn "empty string key => ", Dump $add_entries;
+        # add other paths based on rule id's
+        for my $rule_id ( keys %$add_entries ){
+            # add only paths of existing rules
+            if ( exists $h_s_ast->{ $rule_id } ){
+                for my $path ( keys %{ $add_entries->{ $rule_id } } ){
+                    next if $path eq 'add missing paths';
+                    $h_t_ast->{ $path } = $add_entries->{ $rule_id }->{ $path };
+                }
+            }
+        }
+    }
+
+    # iterate over translation tables of rules
+    # and translate rules accordingly
+    for my $rule_id ( grep { $_ ne '' } keys %$t ){
+        # rule's translation table
+        my $rule_tt = $t->{ $rule_id }; 
+
+        # iterate over rules translating them based on the table
+        if ( exists $h_s_ast->{ $rule_id } ){
+            
+            warn "# translating rule '$rule_id' based on table ", Dump $rule_tt;
+            
+            for my $k ( keys %$rule_tt ){
+                my $v = $rule_tt->{ $k };
+            
+                my $v_type = ref $v;
+                my $k_type = ref $k;
+
+                # scalar => scalar
+                if (not $k_type and not $v_type) { 
+                    warn "'$k' and '$v' are scalars";
+                    # add the value of path $k from the source ast
+                    # (if it exists) and 
+                    # as the value of path $v in the target ast
+                    warn "adding $v => $h_s_ast->{ $rule_id }->{ $k }";
+                    $h_t_ast->{ $v } = $h_s_ast->{ $rule_id }->{ $k };
+                }
+                # 
+                else{
+                }
+            } ## for for my $k ( keys %$rule_tt ){
+        } ## if exists $h_s_ast->{ $rule_id } ){
+    } ## for my $rule_id
+    
+    # add source ast's paths missing from the translation
+    # to the target paths
+    
+    warn "# target ast hash ", Dump $h_t_ast;
+    
+    return $h_t_ast;
+}
+
+# Build target ast $t_ast by converting source ast $s_ast to hash,
+# building target ast hash based on $s_ast and translation table $t
+# and re-creating target ast from hash
+sub ast_translate{
+    my ($s_ast, $t) = @_;
+
+    my $h_s_ast = ast_to_hash( $s_ast );
+    my $h_t_ast = hash_ast_translate( $h_s_ast, $t );
+    my $t_ast = hash_to_ast( $h_t_ast );
+    warn "# target ast ", Dump $t_ast;
+    
     return $t_ast;
 }
 
@@ -702,14 +756,13 @@ for my $name (sort keys %$tests){
             next if $name eq $name_to;
 
             my $t = $tt->{$name}->{$name_to};
-            next unless defined $t;
-
-            diag ' ' x length($name), ' => ', $name_to;
-#            warn Dump $t;
+            next unless defined $t; # skip non-existing tables
+            next unless %$t; # skip existing, but empty tables
 
             my $t_ast = ast_translate( $ast, $t );
             my $t_s = ast_derive( $t_ast );
-
+            
+            diag "$name -> $name_to:";
             is_deeply $t_ast, $tests->{ $name_to }->[ 2 ]->[ $i ], "$s -> $t_s";
             
         }
