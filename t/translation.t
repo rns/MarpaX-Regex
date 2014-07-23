@@ -2,9 +2,15 @@ use 5.010;
 use strict;
 use warnings;
 
+use utf8;
+
 use Test::More;
 
-use Scalar::Util qw( reftype );
+binmode Test::More->builder->output, ":utf8";
+binmode Test::More->builder->failure_output, ":utf8";
+
+binmode STDOUT, ":utf8";
+binmode STDERR, ":utf8";
 
 =pod Use Cases
 
@@ -76,9 +82,9 @@ my $tests = {
             non_quote ~ [^"] #"
         },
         [
-            ['S','"',['S',['non_quotes',' words in typewriter double quotes']],'"'],
-            ['S','"',['S',['S',['S',['non_quotes',' words in ']],['S','"',['S',['non_quotes','nested angle']],'"']],['S',['non_quotes',' quotes ']]],'"'],
-            ['S/quoted','"',['S/pair',['S/pair',['S/non-quoted',['non_quotes',' words in ']],['S/quoted','"',['S/pair',['S/pair',['S/non-quoted',['non_quotes','nested ']],['S/quoted','"',['S/non-quoted',['non_quotes','and even mode nested']],'"']],['S/non-quoted',['non_quotes',' angle']]],'"']],['S/non-quoted',['non_quotes',' quotes ']]],'"']
+            ['S/pair',['S/pair',['S/non-quoted',['non_quotes','these are ']],['S/quoted','"',['S/non-quoted',['non_quotes','words in typewriter double quotes']],'"']],['S/non-quoted',['non_quotes',' and then some']]],
+            ['S/pair',['S/pair',['S/pair',['S/pair',['S/non-quoted',['non_quotes','these are ']],['S/quoted','"',['S/non-quoted',['non_quotes','words in ']],'"']],['S/non-quoted',['non_quotes','nested typewriter double']]],['S/quoted','"',['S/non-quoted',['non_quotes',' quotes']],'"']],['S/non-quoted',['non_quotes',' and then some']]],
+            ['S/pair',['S/pair',['S/pair',['S/pair',['S/pair',['S/pair',['S/non-quoted',['non_quotes','these are ']],['S/quoted','"',['S/non-quoted',['non_quotes','words in ']],'"']],['S/non-quoted',['non_quotes','nested ']]],['S/quoted','"',['S/non-quoted',['non_quotes','and even mode nested']],'"']],['S/non-quoted',['non_quotes',' typewriter double']]],['S/quoted','"',['S/non-quoted',['non_quotes',' quotes']],'"']],['S/non-quoted',['non_quotes',' and then some']]]
         ]
     ], 
     # curly double quotes
@@ -97,9 +103,9 @@ my $tests = {
             non_quote ~ [^“”] #"
         },
         [
-            ['S','"',['S',['non_quotes',' words in curly double quotes']],'"'],
-            ['S','"',['S',['S',['S',['non_quotes',' words in ']],['S','"',['S',['non_quotes','nested angle']],'"']],['S',['non_quotes',' quotes ']]],'"'],
-            ['S/quoted','"',['S/pair',['S/pair',['S/non-quoted',['non_quotes',' words in ']],['S/quoted','"',['S/pair',['S/pair',['S/non-quoted',['non_quotes','nested ']],['S/quoted','"',['S/non-quoted',['non_quotes','and even mode nested']],'"']],['S/non-quoted',['non_quotes',' angle']]],'"']],['S/non-quoted',['non_quotes',' quotes ']]],'"']
+            ['S/pair',['S/pair',['S/non-quoted',['non_quotes','these are ']],['S/quoted','“',['S/non-quoted',['non_quotes','words in curly double quotes']],'”']],['S/non-quoted',['non_quotes',' and then some']]],
+            ['S/pair',['S/pair',['S/non-quoted',['non_quotes','these are ']],['S/quoted','“',['S/pair',['S/pair',['S/non-quoted',['non_quotes','words in ']],['S/quoted','“',['S/non-quoted',['non_quotes','nested curly double']],'”']],['S/non-quoted',['non_quotes',' quotes']]],'”']],['S/non-quoted',['non_quotes',' and then some']]],
+            ['S/pair',['S/pair',['S/non-quoted',['non_quotes','these are ']],['S/quoted','“',['S/pair',['S/pair',['S/non-quoted',['non_quotes','words in ']],['S/quoted','“',['S/pair',['S/pair',['S/non-quoted',['non_quotes','nested ']],['S/quoted','“',['S/non-quoted',['non_quotes','and even mode nested']],'”']],['S/non-quoted',['non_quotes',' curly double']]],'”']],['S/non-quoted',['non_quotes',' quotes']]],'”']],['S/non-quoted',['non_quotes',' and then some']]]
         ]
     ], 
     #    2 + 3                         -- infix
@@ -404,39 +410,9 @@ sub parse{
 #
 # Translation Table
 #
-=pod Translation Table format       
-    
-# source ast path and values
-$tt->{ $source_id }->{ $target_id } = {
-    
-}
+=pod Translation Table Paste bin
 
-# $tt -> { infix } -> { postfix }
-
-# scalar => scalar 
-#   source_path => target_path -- 
-#       copy value from source_path in the source ast to target_path in the target ast
-'e/add/0/int'   => 'e/add/1/int',
-'e/add/2/int'   => 'e/add/2/int',
-'e/add/1/plus'  => 'e/add/3/plus',
-'e/mul/1/star' => 'e/mul/3/star',
-
-# '' => hash_ref
-#   empty string (no such key in source ast):
-#       copy the paths and values from the hash ref to the target ast
-#   if 'add missing paths' key exists in %$hash_ref
-#       the keys from the source ast hash missing in the translatino table will be
-#       added to the target ast hash
-'' => { 
-    'e/add/0' => '(',
-    'e/mul/0' => '(',
-    'e/add/4' => ')',
-    'e/mul/4' => ')',
-}
-
-# not exists $t->{$source_ast_path} 
-#   source ast path not found in translation table:
-#       copy it and its value to the target ast
+# scalar regex => scalar, regex, array_ref, code_ref, hash_ref
 
 # scalar => hash_ref
 #   ???
@@ -459,9 +435,9 @@ source_path => code_ref
 #   and copy the resulting hash ref to the target ast
 source_path_search_regex => code_ref
 
-# ==========================================================
-# ========================== ASTs ==========================
-# ==========================================================
+# 
+# ASTs
+# 
 
 # English
 
@@ -531,6 +507,13 @@ e/mul/2/int: 2
 e/mul/3/int: 3
 e/mul/4: )
 
+# well-formed typewriter double quotes
+S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
+S/pair/0/S/pair/1/S/quoted/0: '"'
+S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: words in typewriter double quotes
+S/pair/0/S/pair/1/S/quoted/2: '"'
+S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
+
 # well-formed curly double quotes
 
 S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
@@ -565,37 +548,34 @@ S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
     
 =cut            
 
+#
 # Translation Table proper
+#
 my $tt = {
     'well-formed typewriter double quotes' => {
     },
     infix => {
         postfix => {
-            # source ast's rule id
+            # source ast path fragment to be matched:
+            #   scalar or regex
+            #   scalar is matched as rule_id
+            #   regex is matched against source ast paths
             'e/add' => { 
-                # source ast path to value => target ast path
-                'e/add/0/int'   => 'e/add/1/int',
-                'e/add/2/int'   => 'e/add/2/int',
-                'e/add/1/plus'  => 'e/add/3/plus',
+                # target tree path => value from source tree path
+                # remove rule_id?
+                'e/add/0' => '(', # add path to value
+                'e/add/1/int'  => 'e/add/0/int', # add path to value in the source ast hash
+                'e/add/2/int'  => 'e/add/2/int',
+                'e/add/3/plus' => 'e/add/1/plus',
+                'e/add/4' => ')'
             },
             'e/mul' => {
-                'e/mul/0/int'   => 'e/mul/1/int',
-                'e/mul/2/int'   => 'e/mul/2/int',
-                'e/mul/1/star' => 'e/mul/3/star',
+                'e/mul/0' => '(',
+                'e/mul/1/int'  => 'e/mul/0/int',
+                'e/mul/2/int'  => 'e/mul/2/int',
+                'e/mul/3/star' => 'e/mul/1/star',
+                'e/mul/4' => ')'
             },
-            # no such path in source tree: add to target tree based on rule id
-            '' => { 
-                # source ast's rule id
-                'e/add' => { 
-                    # target ast path => target ast value
-                    'e/add/0' => '(',
-                    'e/add/4' => ')',
-                },
-                'e/mul' => {
-                    'e/mul/0' => '(',
-                    'e/mul/4' => ')',
-                }
-            }
         },
         prefix => {
         },
@@ -644,61 +624,33 @@ sub hash_ast_translate{
     warn "# table", Dump $t;
     
     # sort source ast hash by rule id's
-    $h_s_ast = hash_ast_by_rule_id( $h_s_ast );
+    my $h_r_ast = hash_ast_by_rule_id( $h_s_ast );
     
     my $h_t_ast = {};
     
-    # handle empty keys (adding)
-    if ( exists $t->{ '' } ){
-        my $add_entries = $t->{ '' };
-        warn "empty string key => ", Dump $add_entries;
-        # add other paths based on rule id's
-        for my $rule_id ( keys %$add_entries ){
-            # add only paths of existing rules
-            if ( exists $h_s_ast->{ $rule_id } ){
-                for my $path ( keys %{ $add_entries->{ $rule_id } } ){
-                    next if $path eq 'add missing paths';
-                    $h_t_ast->{ $path } = $add_entries->{ $rule_id }->{ $path };
+    for my $k (keys %$t){
+        my $k_type = ref $k;
+        if (not $k_type){ # scalar
+            if (exists $h_r_ast->{ $k }){
+                my $rule_paths = $h_r_ast->{ $k };
+                for my $t_path ( keys $t->{ $k } ){ 
+                    my $v = $t->{ $k }->{ $t_path };
+                    if (exists $rule_paths->{ $v }){ 
+                        # value is a path in source ast 
+                        # add its value to target ast
+                        $h_t_ast->{ $t_path } = $rule_paths->{ $v };
+                    }
+                    else{ 
+                        # value is a path in the target ast
+                        # add it to the target ast
+                        $h_t_ast->{ $t_path } = $v;
+                    }
                 }
             }
         }
+        elsif ($k_type eq "Regexp"){
+        }
     }
-
-    # iterate over translation tables of rules
-    # and translate rules accordingly
-    for my $rule_id ( grep { $_ ne '' } keys %$t ){
-        # rule's translation table
-        my $rule_tt = $t->{ $rule_id }; 
-
-        # iterate over rules translating them based on the table
-        if ( exists $h_s_ast->{ $rule_id } ){
-            
-            warn "# translating rule '$rule_id' based on table ", Dump $rule_tt;
-            
-            for my $k ( keys %$rule_tt ){
-                my $v = $rule_tt->{ $k };
-            
-                my $v_type = ref $v;
-                my $k_type = ref $k;
-
-                # scalar => scalar
-                if (not $k_type and not $v_type) { 
-                    warn "'$k' and '$v' are scalars";
-                    # add the value of path $k from the source ast
-                    # (if it exists) and 
-                    # as the value of path $v in the target ast
-                    warn "adding $v => $h_s_ast->{ $rule_id }->{ $k }";
-                    $h_t_ast->{ $v } = $h_s_ast->{ $rule_id }->{ $k };
-                }
-                # 
-                else{
-                }
-            } ## for for my $k ( keys %$rule_tt ){
-        } ## if exists $h_s_ast->{ $rule_id } ){
-    } ## for my $rule_id
-    
-    # add source ast's paths missing from the translation
-    # to the target paths
     
     warn "# target ast hash ", Dump $h_t_ast;
     
@@ -734,6 +686,10 @@ for my $name (sort keys %$tests){
         my $r = Marpa::R2::Scanless::R->new( { grammar => $g } );
         my $ast = parse( $r, $input );
 
+#        diag "input: ", $input;
+#        warn ast_show( $ast );
+#        warn ast_show_compact( $ast );
+        
         # derive string from ast (must parse to the same tree as the input)
         my $s = ast_derive( $ast );
         $r = Marpa::R2::Scanless::R->new( { grammar => $g } );
@@ -751,19 +707,20 @@ for my $name (sort keys %$tests){
         is_deeply($ds_ast, $s_ast, "ast re-created from hash");
 
         # translate into other if there is the translation table
-        for my $name_to ( keys %$tests ){
+        for my $t_name ( keys %$tests ){ # target name
 
-            next if $name eq $name_to;
+            next if $name eq $t_name;
 
-            my $t = $tt->{$name}->{$name_to};
+            my $t = $tt->{$name}->{$t_name};
             next unless defined $t; # skip non-existing tables
             next unless %$t; # skip existing, but empty tables
 
             my $t_ast = ast_translate( $ast, $t );
             my $t_s = ast_derive( $t_ast );
             
-            diag "$name -> $name_to:";
-            is_deeply $t_ast, $tests->{ $name_to }->[ 2 ]->[ $i ], "$s -> $t_s";
+            diag "$name -> $t_name:";
+            my $t_trees = $tests->{ $t_name }->[ 2 ]; # target trees
+            is_deeply $t_ast, $t_trees->[ $i ], "$s -> $t_s";
             
         }
 
