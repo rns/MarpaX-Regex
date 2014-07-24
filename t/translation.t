@@ -66,46 +66,45 @@ $Data::Dumper::Terse = 1;
 use YAML;
 
 my $tests = {
+    # nested quotes garmmar based on http://marvin.cs.uidaho.edu/Teaching/CS445/grammar.html
     # typewriter double quotes (to be translated to curly (“...”) quotes) 
     'well-formed typewriter double quotes' => [
         [ 
-            'these are "words in typewriter double quotes" and then some', 
-            'these are "words in "nested typewriter double" quotes" and then some',  
-            'these are "words in "nested "and even mode nested" typewriter double" quotes" and then some' ],
+            '"these are "words in typewriter double quotes" and then some"', 
+            '"these are "words in "nested typewriter double" quotes" and then some"',  
+            '"these are "words in "nested "and even more nested" typewriter double" quotes" and then some"'
+        ],
         q{
-            S ::= S S       name => 'pair' |
-                  '"' S '"' name => 'quoted' |
-                  '"' '"'   name => 'empty-quoted' |
-                  non_quotes name => 'non-quoted'
-
-            non_quotes ~ non_quote*
-            non_quote ~ [^"] #"
+            S       ::= '"' quoted '"'
+            quoted  ::= item | quoted item
+            item    ::= S | unquoted
+            
+            unquoted ~ [^"]+ # "
         },
         [
-            ['S/pair',['S/pair',['S/non-quoted',['non_quotes','these are ']],['S/quoted','"',['S/non-quoted',['non_quotes','words in typewriter double quotes']],'"']],['S/non-quoted',['non_quotes',' and then some']]],
-            ['S/pair',['S/pair',['S/pair',['S/pair',['S/non-quoted',['non_quotes','these are ']],['S/quoted','"',['S/non-quoted',['non_quotes','words in ']],'"']],['S/non-quoted',['non_quotes','nested typewriter double']]],['S/quoted','"',['S/non-quoted',['non_quotes',' quotes']],'"']],['S/non-quoted',['non_quotes',' and then some']]],
-            ['S/pair',['S/pair',['S/pair',['S/pair',['S/pair',['S/pair',['S/non-quoted',['non_quotes','these are ']],['S/quoted','"',['S/non-quoted',['non_quotes','words in ']],'"']],['S/non-quoted',['non_quotes','nested ']]],['S/quoted','"',['S/non-quoted',['non_quotes','and even mode nested']],'"']],['S/non-quoted',['non_quotes',' typewriter double']]],['S/quoted','"',['S/non-quoted',['non_quotes',' quotes']],'"']],['S/non-quoted',['non_quotes',' and then some']]]
+            ['S','"',['quoted',['quoted',['quoted',['item',['unquoted','these are ']]],['item',['S','"',['quoted',['item',['unquoted','words in typewriter double quotes']]],'"']]],['item',['unquoted',' and then some']]],'"'],
+            ['S','"',['quoted',['quoted',['quoted',['item',['unquoted','these are ']]],['item',['S','"',['quoted',['quoted',['quoted',['item',['unquoted','words in ']]],['item',['S','"',['quoted',['item',['unquoted','nested typewriter double']]],'"']]],['item',['unquoted',' quotes']]],'"']]],['item',['unquoted',' and then some']]],'"'],
+            ['S','"',['quoted',['quoted',['quoted',['item',['unquoted','these are ']]],['item',['S','"',['quoted',['quoted',['quoted',['item',['unquoted','words in ']]],['item',['S','"',['quoted',['quoted',['quoted',['item',['unquoted','nested ']]],['item',['S','"',['quoted',['item',['unquoted','and even more nested']]],'"']]],['item',['unquoted',' typewriter double']]],'"']]],['item',['unquoted',' quotes']]],'"']]],['item',['unquoted',' and then some']]],'"']
         ]
     ], 
     # curly double quotes
     'well-formed curly double quotes' => [
         [ 
-            'these are “words in curly double quotes” and then some', 
-            'these are “words in “nested curly double” quotes” and then some',  
-            'these are “words in “nested “and even mode nested” curly double” quotes” and then some' ],
+            '“these are “words in curly double quotes” and then some”', 
+            '“these are “words in “nested curly double” quotes” and then some”',  
+            '“these are “words in “nested “and even more nested” curly double” quotes” and then some”' 
+        ],
         q{
-            S ::= S S       name => 'pair' |
-                  '“' S '”' name => 'quoted' |
-                  '“' '”'   name => 'empty-quoted' |
-                  non_quotes name => 'non-quoted'
-
-            non_quotes ~ non_quote*
-            non_quote ~ [^“”] #"
+            S       ::= '“' quoted '”'
+            quoted  ::= item | quoted item
+            item    ::= S | unquoted
+            
+            unquoted ~ [^“”]+
         },
         [
-            ['S/pair',['S/pair',['S/non-quoted',['non_quotes','these are ']],['S/quoted','“',['S/non-quoted',['non_quotes','words in curly double quotes']],'”']],['S/non-quoted',['non_quotes',' and then some']]],
-            ['S/pair',['S/pair',['S/non-quoted',['non_quotes','these are ']],['S/quoted','“',['S/pair',['S/pair',['S/non-quoted',['non_quotes','words in ']],['S/quoted','“',['S/non-quoted',['non_quotes','nested curly double']],'”']],['S/non-quoted',['non_quotes',' quotes']]],'”']],['S/non-quoted',['non_quotes',' and then some']]],
-            ['S/pair',['S/pair',['S/non-quoted',['non_quotes','these are ']],['S/quoted','“',['S/pair',['S/pair',['S/non-quoted',['non_quotes','words in ']],['S/quoted','“',['S/pair',['S/pair',['S/non-quoted',['non_quotes','nested ']],['S/quoted','“',['S/non-quoted',['non_quotes','and even mode nested']],'”']],['S/non-quoted',['non_quotes',' curly double']]],'”']],['S/non-quoted',['non_quotes',' quotes']]],'”']],['S/non-quoted',['non_quotes',' and then some']]]
+            ['S','“',['quoted',['quoted',['quoted',['item',['unquoted','these are ']]],['item',['S','“',['quoted',['item',['unquoted','words in curly double quotes']]],'”']]],['item',['unquoted',' and then some']]],'”'],
+            ['S','“',['quoted',['quoted',['quoted',['item',['unquoted','these are ']]],['item',['S','“',['quoted',['quoted',['quoted',['item',['unquoted','words in ']]],['item',['S','“',['quoted',['item',['unquoted','nested curly double']]],'”']]],['item',['unquoted',' quotes']]],'”']]],['item',['unquoted',' and then some']]],'”'],
+            ['S','“',['quoted',['quoted',['quoted',['item',['unquoted','these are ']]],['item',['S','“',['quoted',['quoted',['quoted',['item',['unquoted','words in ']]],['item',['S','“',['quoted',['quoted',['quoted',['item',['unquoted','nested ']]],['item',['S','“',['quoted',['item',['unquoted','and even more nested']]],'”']]],['item',['unquoted',' curly double']]],'”']]],['item',['unquoted',' quotes']]],'”']]],['item',['unquoted',' and then some']]],'”']
         ]
     ], 
     #    2 + 3                         -- infix
@@ -305,7 +304,7 @@ sub ast_symbol_name_to_id {
 }
 
 #
-# turn a hash produced by ast_to_hash() back to an ast
+# turn a hash of paths to terminals produced by ast_to_hash() back to an ast
 #
 sub hash_to_ast{
     my ($hash) = @_;
@@ -315,7 +314,7 @@ sub hash_to_ast{
     
     my $ast = [ ];
     
-    for my $path (sort keys %$hash){
+    for my $path ( keys %$hash ){
 
 #        warn "\npath:  ", $path, ": '$hash->{ $path }'";
 
@@ -399,11 +398,79 @@ sub do_ast_to_hash {
 sub parse{
     my ($slr, $input) = @_;
     $slr->read( \$input );
+#    warn "Multiple parses!" if $slr->ambiguity_metric() > 1;
     my $ast = ${ $slr->value() };
-#    warn Dumper $ast;
-#    warn ast_show($ast);
-    ast_symbol_name_to_id($ast);
+    ast_symbol_name_to_id( $ast );
     return $ast;
+
+=pod handling multiple parses
+    my $ast;
+    my %seen_asts;
+    if ($slr->ambiguity_metric() > 1 and $input =~ /nested.*typewriter/ ){
+#        warn "# input:\n<$input>";
+        my $ast_ref;
+        while ( defined( $ast_ref = $slr->value() ) ) {
+
+            $ast = ${ $ast_ref };
+            next unless $ast;
+            
+            my $dump_ast = Dumper $ast;
+            next if exists $seen_asts{$dump_ast};
+            $seen_asts{$dump_ast}++;
+            
+            # convert typewriter quotes to curly quotes 
+            ast_symbol_name_to_id($ast);
+            my $h_ast = ast_to_hash( $ast );
+            for my $p ( keys %$h_ast ){
+                my $v = $h_ast->{ $p };
+                if ( $p =~ m{ S/quoted/0$ }x ){
+                    $h_ast->{ $p } = '“'
+                }
+                elsif ( $p =~ m{ S/quoted/2$ }x ){
+                    $h_ast->{ $p } = '”'
+                }
+            }
+            my $patched_ast = hash_to_ast( $h_ast );
+            
+            # derive input with curly quotes
+            my $derived = ast_derive( $patched_ast );
+            $derived =~ s/“ /“/g;
+            $derived =~ s/ “/“/g;
+            $derived =~ s/” /”/g;
+            $derived =~ s/ ”/”/g;
+            $derived =~ s/typewriter/curly/g;
+#            warn "# derived:\n<$derived>", ;
+            
+            # get proper nested curly quotes input
+            my $properly_nested_curlies;
+            my $nesting_level;
+            if ( $input =~ m{even more nested} ){
+                $properly_nested_curlies = $tests->{ 'well-formed curly double quotes' }->[0]->[2];
+                $nesting_level = 3;
+            }
+            elsif ( $input =~ m{nested} ){
+                $properly_nested_curlies = $tests->{ 'well-formed curly double quotes' }->[0]->[1];
+                $nesting_level = 2;
+            }
+            
+            next unless $derived eq $properly_nested_curlies;
+#            warn "# derived:\n<$derived>", ;
+#            warn "# properly_nested_curlies:\n<$properly_nested_curlies>";
+#            warn "# correct nesting level $nesting_level ast";
+            warn "# compact:\n", ast_show_compact( $ast );
+#            warn "# full:\n", ast_show( $ast );
+#            warn "# hash of paths:\n", Dump $h_ast;
+            
+        }
+    }
+    else{
+        $ast = ${ $slr->value() };
+    #    warn Dumper $ast;
+    #    warn ast_show($ast);
+        ast_symbol_name_to_id($ast);
+    }
+    return $ast;
+=cut
 }
 
 
@@ -508,42 +575,67 @@ e/mul/3/int: 3
 e/mul/4: )
 
 # well-formed typewriter double quotes
+
 S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
 S/pair/0/S/pair/1/S/quoted/0: '"'
 S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: words in typewriter double quotes
 S/pair/0/S/pair/1/S/quoted/2: '"'
 S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
 
+S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
+S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/0: '"'
+S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: 'words in '
+S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/2: '"'
+S/pair/0/S/pair/0/S/pair/1/S/non-quoted/0/non_quotes: nested typewriter double
+S/pair/0/S/pair/1/S/quoted/0: '"'
+S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: ' quotes'
+S/pair/0/S/pair/1/S/quoted/2: '"'
+S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
+
+S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
+S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/0: '"'
+S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: 'words in '
+S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/2: '"'
+S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/non-quoted/0/non_quotes: 'nested '
+S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/0: '"'
+S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: and even more nested
+S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/2: '"'
+S/pair/0/S/pair/0/S/pair/1/S/non-quoted/0/non_quotes: ' typewriter double'
+S/pair/0/S/pair/1/S/quoted/0: '"'
+S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: ' quotes'
+S/pair/0/S/pair/1/S/quoted/2: '"'
+S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
+
 # well-formed curly double quotes
 
 S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
-S/pair/0/S/pair/1/S/quoted/0: вЂњ
+S/pair/0/S/pair/1/S/quoted/0: “
 S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: words in curly double quotes
-S/pair/0/S/pair/1/S/quoted/2: вЂќ
+S/pair/0/S/pair/1/S/quoted/2: ”
 S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
 
 S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
-S/pair/0/S/pair/1/S/quoted/0: вЂњ
+S/pair/0/S/pair/1/S/quoted/0: “
 S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'words in '
-S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/0: вЂњ
+S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/0: “
 S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: nested curly double
-S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/2: вЂќ
+S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/2: ”
 S/pair/0/S/pair/1/S/quoted/1/S/pair/1/S/non-quoted/0/non_quotes: ' quotes'
-S/pair/0/S/pair/1/S/quoted/2: вЂќ
+S/pair/0/S/pair/1/S/quoted/2: ”
 S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
 
 S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
-S/pair/0/S/pair/1/S/quoted/0: вЂњ
+S/pair/0/S/pair/1/S/quoted/0: “
 S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'words in '
-S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/0: вЂњ
+S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/0: “
 S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'nested '
-S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/0: вЂњ
-S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: and even mode nested
-S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/2: вЂќ
+S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/0: “
+S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: and even more nested
+S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/2: ”
 S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/pair/1/S/non-quoted/0/non_quotes: ' curly double'
-S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/2: вЂќ
+S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/2: ”
 S/pair/0/S/pair/1/S/quoted/1/S/pair/1/S/non-quoted/0/non_quotes: ' quotes'
-S/pair/0/S/pair/1/S/quoted/2: вЂќ
+S/pair/0/S/pair/1/S/quoted/2: ”
 S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
     
 =cut            
@@ -553,6 +645,27 @@ S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
 #
 my $tt = {
     'well-formed typewriter double quotes' => {
+        'well-formed curly double quotes' => {
+            # need syntax to specify matching path
+            # nested quotes
+            qr{ item/0/S/0$ } => {
+                'fullpath' => '“'
+            }, 
+            qr{ item/0/S/2$ } => {
+                'fullpath' => '”'
+            }, 
+            # outermost quotes
+            qr{ ^S/0$ } => {
+                'fullpath' => '“'
+            }, 
+            qr{ ^S/2$ } => {
+                'fullpath' => '”'
+            }, 
+#            qr{ /non_quotes$ } => {
+#                'value' => qr//
+#            },
+            'add missing paths' => 1
+        }
     },
     infix => {
         postfix => {
@@ -619,9 +732,9 @@ sub hash_ast_by_rule_id{
 sub hash_ast_translate{
     my ($h_s_ast, $t) = @_;
 
-    warn "hash_ast_translate";
-    warn "# source ast", Dump $h_s_ast;
-    warn "# table", Dump $t;
+#    warn "hash_ast_translate";
+#    warn "# source ast", Dump $h_s_ast;
+#    warn "# table", Dump $t;
     
     # sort source ast hash by rule id's
     my $h_r_ast = hash_ast_by_rule_id( $h_s_ast );
@@ -629,30 +742,59 @@ sub hash_ast_translate{
     my $h_t_ast = {};
     
     for my $k (keys %$t){
-        my $k_type = ref $k;
-        if (not $k_type){ # scalar
-            if (exists $h_r_ast->{ $k }){
-                my $rule_paths = $h_r_ast->{ $k };
-                for my $t_path ( keys $t->{ $k } ){ 
-                    my $v = $t->{ $k }->{ $t_path };
-                    if (exists $rule_paths->{ $v }){ 
-                        # value is a path in source ast 
-                        # add its value to target ast
-                        $h_t_ast->{ $t_path } = $rule_paths->{ $v };
-                    }
-                    else{ 
-                        # value is a path in the target ast
-                        # add it to the target ast
-                        $h_t_ast->{ $t_path } = $v;
-                    }
+#        warn $k;
+        # try re-stringifying the regexps
+        if( ( index $k, '(?^:' ) == 0 ){
+#            warn "# regexp: $k";
+            my $re = substr $k, 5, -2;
+            $re = qr/$re/;
+#            warn "'$re'";
+            for my $path ( keys %$h_s_ast ){
+                if ( $path =~ $re ){
+#                    warn "path matched: $path";
+                    for my $match ( keys $t->{ $k } ){
+                        my $value = $t->{ $k }->{ $match };
+#                        warn "match: '$match'";
+#                        warn "value: '$value'";
+                        # match full path
+                        if ( $match eq 'fullpath' ){
+#                            warn "full path: $path";
+                            # add the full match path to the target ast hash
+                            # with the supplied value
+                            $h_t_ast->{ $path } = $value;
+                        }
+                    } 
                 }
             }
         }
-        elsif ($k_type eq "Regexp"){
+        # it's rule_id
+        elsif ( exists $h_r_ast->{ $k } ){
+            my $rule_paths = $h_r_ast->{ $k };
+            for my $t_path ( keys $t->{ $k } ){ 
+                my $v = $t->{ $k }->{ $t_path };
+                if (exists $rule_paths->{ $v }){ 
+                    # value is a path in source ast 
+                    # add its value to target ast
+                    $h_t_ast->{ $t_path } = $rule_paths->{ $v };
+                }
+                else{ 
+                    # value is a path in the target ast
+                    # add it to the target ast
+                    $h_t_ast->{ $t_path } = $v;
+                }
+            }
         }
     }
     
-    warn "# target ast hash ", Dump $h_t_ast;
+    if ( exists $t->{ 'add missing paths' } ){
+#        warn "add missing paths";
+        for my $path ( keys %$h_s_ast ){
+            next if exists $h_t_ast->{ $path }; # skip existing paths
+            $h_t_ast->{ $path } = $h_s_ast->{ $path };
+        }
+    }
+
+#    warn "# target ast hash ", Dump $h_t_ast;
     
     return $h_t_ast;
 }
@@ -663,10 +805,11 @@ sub hash_ast_translate{
 sub ast_translate{
     my ($s_ast, $t) = @_;
 
-    my $h_s_ast = ast_to_hash( $s_ast );
-    my $h_t_ast = hash_ast_translate( $h_s_ast, $t );
-    my $t_ast = hash_to_ast( $h_t_ast );
-    warn "# target ast ", Dump $t_ast;
+    my $h_s_ast = ast_to_hash       ( $s_ast        );
+    my $h_t_ast = hash_ast_translate( $h_s_ast, $t  );
+    my $t_ast   = hash_to_ast       ( $h_t_ast      );
+    
+#    warn "# target ast\n", ast_show( $t_ast );
     
     return $t_ast;
 }
@@ -683,12 +826,14 @@ for my $name (sort keys %$tests){
         
         # parse input string
         my $input = $inputs->[ $i ];
+        diag "input: ", $input if $name =~ /quotes/;
         my $r = Marpa::R2::Scanless::R->new( { grammar => $g } );
         my $ast = parse( $r, $input );
+        
+#        diag "input: ", $input  if $name =~ /quotes/;
 
-#        diag "input: ", $input;
-#        warn ast_show( $ast );
-#        warn ast_show_compact( $ast );
+#        warn "!$name:\n", ast_show ( $ast ) if $name =~ /curly/;
+#        warn "!$name:compact:\n", ast_show_compact( $ast ) if $name =~ /quotes|curly/;
         
         # derive string from ast (must parse to the same tree as the input)
         my $s = ast_derive( $ast );
@@ -702,10 +847,10 @@ for my $name (sort keys %$tests){
         # deserialized ast
         my $ds_ast = hash_to_ast($hash_ast);
         
-#        warn Dump $hash_ast;
+#        warn "# hash ast\n", Dump $hash_ast if $name =~ /quotes/;
         
         is_deeply($ds_ast, $s_ast, "ast re-created from hash");
-
+        
         # translate into other if there is the translation table
         for my $t_name ( keys %$tests ){ # target name
 
@@ -714,7 +859,7 @@ for my $name (sort keys %$tests){
             my $t = $tt->{$name}->{$t_name};
             next unless defined $t; # skip non-existing tables
             next unless %$t; # skip existing, but empty tables
-
+            
             my $t_ast = ast_translate( $ast, $t );
             my $t_s = ast_derive( $t_ast );
             

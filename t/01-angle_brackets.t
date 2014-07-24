@@ -49,5 +49,6 @@ my $g = Marpa::R2::Scanless::G->new( { source  => \$dsl } );
 my $r = Marpa::R2::Scanless::R->new( { grammar => $g } );
 say $g->show_symbols;
 $r->read( \$string );
+say "multiple parses!" if $r->ambiguity_metric() > 1;
 my $v = ${ $r->value() };
 say Dumper $v;
