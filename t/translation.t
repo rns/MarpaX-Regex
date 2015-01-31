@@ -12,6 +12,18 @@ binmode Test::More->builder->failure_output, ":utf8";
 binmode STDOUT, ":utf8";
 binmode STDERR, ":utf8";
 
+=pod Notes
+    
+    expression list shall be the rop rule instead of simple expressions?
+    
+    ast_show
+        add structual elements like in st_timeflies.t that need a new line after them
+          allow passing structural elements which need a new line after them
+          left/right space normalization
+          perhaps by postprocessing callbacks   
+        
+=cut
+
 =pod Use Cases
 
     2 + 3                         -- infix
@@ -37,24 +49,29 @@ binmode STDERR, ":utf8";
     A synchronous context free grammar for time normalization
     -- http://aclweb.org/anthology//D/D13/D13-1078.pdf
     -- https://github.com/bethard/timenorm
+
+    So I excel sheet I have string like below:
+
+    If ((Myvalue.xyz == 1) Or (Frame_1.signal_1 == 1)) Then a = 1
+    Else a = 0;
+    
+    This I have to convert into:
+
+    a = (((Myvalue.xyz == 1) || (Frame_1.signal_1 == 1))?1:0)
+    -- http://longanswers.blogspot.de/2013/06/transforming-syntax.html
+
+    SLIF <-> BNF
+        <non-terminal>
+        terminal
+        'lexeme'
+        "lexeme"
+            
+    SLIF <-> EBNF
+    
+    EBNF <-> BNF
     
     Marpa <-> Perl Regexes
     
-=cut
-
-=pod Notes
-
-    Unique IDs of Parse Tree Nodes
-
-        If any rule has more than one rhs alternative, then a unique node id is 'lhs/name' otherwise the unique node id is the lhs of the rule.
-
-    ast_show
-        add structual elements like in st_timeflies.t that need a new line after them
-    todo: 
-      allow passing structural elements which need a new line after them
-      left/right space normalization
-      perhaps by postprocessing callbacks   
-        
 =cut
 
 use Marpa::R2;
@@ -66,7 +83,7 @@ $Data::Dumper::Terse = 1;
 use YAML;
 
 my $tests = {
-    # nested quotes garmmar based on http://marvin.cs.uidaho.edu/Teaching/CS445/grammar.html
+    # nested quotes grammar based on http://marvin.cs.uidaho.edu/Teaching/CS445/grammar.html
     # typewriter double quotes (to be translated to curly (“...”) quotes) 
     'well-formed typewriter double quotes' => [
         [ 
@@ -172,7 +189,7 @@ my $tests = {
             e    ::= push push add name => 'add' | 
                      push push mul name => 'mul'
             push ::= 'bipush' int
-            int  ~ [\d]
+            int  ~ [\d]+
             add  ~ 'iadd'
             mul  ~ 'imul'
         },
@@ -207,6 +224,10 @@ my $grammar_epilog = q{
     whitespace ~ [\s+]
 };
 
+sub ast_traverse{
+
+}
+
 #
 # each node on the newline indented in 2-space increments
 # literals in single quotes ''
@@ -230,6 +251,15 @@ sub ast_show{
         $s .= $indent . "'$ast'"  . "\n";
     }
     $depth--;
+    return $s;
+}
+
+sub ast_hash_show{
+    my ( $hash_ast ) = @_;
+    my $s = '';
+    for my $p ( sort keys %$hash_ast ){
+        $s .= "$p: $hash_ast->{$p}\n";    
+    }
     return $s;
 }
 
@@ -258,7 +288,7 @@ sub ast_show_compact{
 }
 
 #
-# generate string $s from $ast
+# derive $s from $ast
 #
 sub ast_derive{
     my ($ast) = @_;
@@ -271,6 +301,8 @@ sub ast_derive{
             $s .= $nodes[0];
         }
         else{
+            # TODO: smarter delimiters via %$structural as a parameter
+            #       perhaps via map {} before @nodes
             $s .= join ' ', map { ast_derive( $_ ) } @nodes;
         }
     }
@@ -402,75 +434,6 @@ sub parse{
     my $ast = ${ $slr->value() };
     ast_symbol_name_to_id( $ast );
     return $ast;
-
-=pod handling multiple parses
-    my $ast;
-    my %seen_asts;
-    if ($slr->ambiguity_metric() > 1 and $input =~ /nested.*typewriter/ ){
-#        warn "# input:\n<$input>";
-        my $ast_ref;
-        while ( defined( $ast_ref = $slr->value() ) ) {
-
-            $ast = ${ $ast_ref };
-            next unless $ast;
-            
-            my $dump_ast = Dumper $ast;
-            next if exists $seen_asts{$dump_ast};
-            $seen_asts{$dump_ast}++;
-            
-            # convert typewriter quotes to curly quotes 
-            ast_symbol_name_to_id($ast);
-            my $h_ast = ast_to_hash( $ast );
-            for my $p ( keys %$h_ast ){
-                my $v = $h_ast->{ $p };
-                if ( $p =~ m{ S/quoted/0$ }x ){
-                    $h_ast->{ $p } = '“'
-                }
-                elsif ( $p =~ m{ S/quoted/2$ }x ){
-                    $h_ast->{ $p } = '”'
-                }
-            }
-            my $patched_ast = hash_to_ast( $h_ast );
-            
-            # derive input with curly quotes
-            my $derived = ast_derive( $patched_ast );
-            $derived =~ s/“ /“/g;
-            $derived =~ s/ “/“/g;
-            $derived =~ s/” /”/g;
-            $derived =~ s/ ”/”/g;
-            $derived =~ s/typewriter/curly/g;
-#            warn "# derived:\n<$derived>", ;
-            
-            # get proper nested curly quotes input
-            my $properly_nested_curlies;
-            my $nesting_level;
-            if ( $input =~ m{even more nested} ){
-                $properly_nested_curlies = $tests->{ 'well-formed curly double quotes' }->[0]->[2];
-                $nesting_level = 3;
-            }
-            elsif ( $input =~ m{nested} ){
-                $properly_nested_curlies = $tests->{ 'well-formed curly double quotes' }->[0]->[1];
-                $nesting_level = 2;
-            }
-            
-            next unless $derived eq $properly_nested_curlies;
-#            warn "# derived:\n<$derived>", ;
-#            warn "# properly_nested_curlies:\n<$properly_nested_curlies>";
-#            warn "# correct nesting level $nesting_level ast";
-            warn "# compact:\n", ast_show_compact( $ast );
-#            warn "# full:\n", ast_show( $ast );
-#            warn "# hash of paths:\n", Dump $h_ast;
-            
-        }
-    }
-    else{
-        $ast = ${ $slr->value() };
-    #    warn Dumper $ast;
-    #    warn ast_show($ast);
-        ast_symbol_name_to_id($ast);
-    }
-    return $ast;
-=cut
 }
 
 
@@ -576,67 +539,43 @@ e/mul/4: )
 
 # well-formed typewriter double quotes
 
-S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
-S/pair/0/S/pair/1/S/quoted/0: '"'
-S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: words in typewriter double quotes
-S/pair/0/S/pair/1/S/quoted/2: '"'
-S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
-
-S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
-S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/0: '"'
-S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: 'words in '
-S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/2: '"'
-S/pair/0/S/pair/0/S/pair/1/S/non-quoted/0/non_quotes: nested typewriter double
-S/pair/0/S/pair/1/S/quoted/0: '"'
-S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: ' quotes'
-S/pair/0/S/pair/1/S/quoted/2: '"'
-S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
-
-S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
-S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/0: '"'
-S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: 'words in '
-S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/2: '"'
-S/pair/0/S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/non-quoted/0/non_quotes: 'nested '
-S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/0: '"'
-S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: and even more nested
-S/pair/0/S/pair/0/S/pair/0/S/pair/1/S/quoted/2: '"'
-S/pair/0/S/pair/0/S/pair/1/S/non-quoted/0/non_quotes: ' typewriter double'
-S/pair/0/S/pair/1/S/quoted/0: '"'
-S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: ' quotes'
-S/pair/0/S/pair/1/S/quoted/2: '"'
-S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
-
 # well-formed curly double quotes
 
-S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
-S/pair/0/S/pair/1/S/quoted/0: “
-S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: words in curly double quotes
-S/pair/0/S/pair/1/S/quoted/2: ”
-S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
+S/0: “
+S/1/quoted/0/quoted/0/quoted/0/item/0/unquoted: 'these are '
+S/1/quoted/0/quoted/1/item/0/S/0: “
+S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/item/0/unquoted: words in curly double quotes
+S/1/quoted/0/quoted/1/item/0/S/2: ”
+S/1/quoted/1/item/0/unquoted: ' and then some'
+S/2: ”
 
-S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
-S/pair/0/S/pair/1/S/quoted/0: “
-S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'words in '
-S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/0: “
-S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: nested curly double
-S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/2: ”
-S/pair/0/S/pair/1/S/quoted/1/S/pair/1/S/non-quoted/0/non_quotes: ' quotes'
-S/pair/0/S/pair/1/S/quoted/2: ”
-S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
+S/0: “
+S/1/quoted/0/quoted/0/quoted/0/item/0/unquoted: 'these are '
+S/1/quoted/0/quoted/1/item/0/S/0: “
+S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/quoted/0/quoted/0/item/0/unquoted: 'words in '
+S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/quoted/1/item/0/S/0: “
+S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/item/0/unquoted: nested curly double
+S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/quoted/1/item/0/S/2: ”
+S/1/quoted/0/quoted/1/item/0/S/1/quoted/1/item/0/unquoted: ' quotes'
+S/1/quoted/0/quoted/1/item/0/S/2: ”
+S/1/quoted/1/item/0/unquoted: ' and then some'
+S/2: ”
 
-S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'these are '
-S/pair/0/S/pair/1/S/quoted/0: “
-S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'words in '
-S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/0: “
-S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/0/S/non-quoted/0/non_quotes: 'nested '
-S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/0: “
-S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/non-quoted/0/non_quotes: and even more nested
-S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/2: ”
-S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/1/S/pair/1/S/non-quoted/0/non_quotes: ' curly double'
-S/pair/0/S/pair/1/S/quoted/1/S/pair/0/S/pair/1/S/quoted/2: ”
-S/pair/0/S/pair/1/S/quoted/1/S/pair/1/S/non-quoted/0/non_quotes: ' quotes'
-S/pair/0/S/pair/1/S/quoted/2: ”
-S/pair/1/S/non-quoted/0/non_quotes: ' and then some'
+S/0: “
+S/1/quoted/0/quoted/0/quoted/0/item/0/unquoted: 'these are '
+S/1/quoted/0/quoted/1/item/0/S/0: “
+S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/quoted/0/quoted/0/item/0/unquoted: 'words in '
+S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/quoted/1/item/0/S/0: “
+S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/quoted/0/quoted/0/item/0/unquoted: 'nested '
+S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/quoted/1/item/0/S/0: “
+S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/item/0/unquoted: and even more nested
+S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/quoted/1/item/0/S/2: ”
+S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/quoted/1/item/0/S/1/quoted/1/item/0/unquoted: ' curly double'
+S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/quoted/1/item/0/S/2: ”
+S/1/quoted/0/quoted/1/item/0/S/1/quoted/1/item/0/unquoted: ' quotes'
+S/1/quoted/0/quoted/1/item/0/S/2: ”
+S/1/quoted/1/item/0/unquoted: ' and then some'
+S/2: ”
     
 =cut            
 
@@ -826,13 +765,13 @@ for my $name (sort keys %$tests){
         
         # parse input string
         my $input = $inputs->[ $i ];
-        diag "input: ", $input if $name =~ /quotes/;
+#        diag "input: ", $input if $name =~ /quotes/;
         my $r = Marpa::R2::Scanless::R->new( { grammar => $g } );
         my $ast = parse( $r, $input );
         
 #        diag "input: ", $input  if $name =~ /quotes/;
 
-#        warn "!$name:\n", ast_show ( $ast ) if $name =~ /curly/;
+        warn "!$name:\n", ast_show ( $ast ) if $name =~ /curly/;
 #        warn "!$name:compact:\n", ast_show_compact( $ast ) if $name =~ /quotes|curly/;
         
         # derive string from ast (must parse to the same tree as the input)
@@ -847,7 +786,7 @@ for my $name (sort keys %$tests){
         # deserialized ast
         my $ds_ast = hash_to_ast($hash_ast);
         
-#        warn "# hash ast\n", Dump $hash_ast if $name =~ /quotes/;
+        warn "# hash ast\n", Dump $hash_ast if $name =~ /curly/;
         
         is_deeply($ds_ast, $s_ast, "ast re-created from hash");
         
@@ -872,5 +811,30 @@ for my $name (sort keys %$tests){
     }
 
 }
+
+=pod try to remove upper level of ast
+
+S/0: “
+S/1/quoted/0/quoted/0/quoted/0/item/0/unquoted: 'these are '
+S/1/quoted/0/quoted/1/item/0/S/0: “
+S/1/quoted/0/quoted/1/item/0/S/1/quoted/0/item/0/unquoted: words in curly double quotes
+S/1/quoted/0/quoted/1/item/0/S/2: ”
+S/1/quoted/1/item/0/unquoted: ' and then some'
+S/2: ”
+
+=cut
+
+my $h = Load q{
+---
+quoted/0/quoted/0/quoted/0/item/0/unquoted: 'these are '
+quoted/0/quoted/1/item/0/S/0: “
+quoted/0/quoted/1/item/0/S/1/quoted/0/item/0/unquoted: words in curly double quotes
+quoted/0/quoted/1/item/0/S/2: ”
+quoted/1/item/0/unquoted: ' and then some'
+};
+warn ast_hash_show( $h );
+my $a = hash_to_ast( $h );
+warn ast_show( $a );
+warn ast_derive( $a );
 
 done_testing();

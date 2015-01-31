@@ -1,6 +1,8 @@
 ﻿MarpaX-Regex
 ============
 
+http://blogs.perl.org/users/jean-damien_durand/2014/02/a-marpa-use-case-javascript-regexp-implementation.html
+
 Buzzwords
 ---------
 
@@ -677,3 +679,5 @@ https://gist.github.com/gruber/8891611
     (?!@)           # not succeeded by a @, avoid matching "foo.na" in "foo.na@example.com"
   )
 )
+
+http://stackoverflow.com/questions/10510700/how-can-i-transform-this-backus-naur-form-expression-into-a-regex-net?rq=1
