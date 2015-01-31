@@ -226,22 +226,35 @@ my $tests = {
 
 =pod Given 2 BNFs, describe transformations from BNF1 AST to BNF2 AST
 
-    rearrangement
-         e/add ::= 1 = 2            # indices
-         e/mul ::= 2 = 1
-         e/add ::= 1, 2 = 2, 1
+# children of a given AST node id
+    ')'         # first occurrence of literal
+    plus        # first occurrence of symbol/node ID
+    0           # child at index 0
+    0..1        # children in index range 0:1
+    '(' [1]     # literal '(' at index 1
+    '(' [1,3]   # literal '(' at indices 1 and 3
+    plus[2]     # symbol/node ID plus at index 2
+    plus[2,1]   # symbol/node ID plus at indices 2 and 1
+
+    swapping
+         e/add, e/mul ::= 1 = 2     # swap children of nodes e/add, e/mul at indices 1 and 2
+         e/add, e/mul ::= 1, 2 = 2, 1      # group swapping
+         e/add, e/mul ::= 1..3 = 1..2      # range swapping
          # node_id lhs[index] in children array
-         e/add ::= source_lhs[1], source_lhs[2] = source_lhs[2], source_lhs[1]
+         e/add ::= source_sym[1], source_sym[2] = target_sym[2], target_sym[1]
     substitution
-         e/mul ::= source_lhs = target_lhs
-         e/add ::= 0..3 = target_lhs
-         e/mul ::= 0..1 = target_lhs1, target_lhs2
-    insertion/removal of terminals
+         e/mul ::= source_sym = target_sym  # substitute all occurrences
+         e/mul, e/add ::= 1 = target_sym           # substitute only symbol at 1
+         e/add ::= 0..3 = target_sym        # substitute range
+         e/mul ::= 0..1 = target_sym1, target_sym2
+    insertion/removal
+         # terminals
          e/add ::= 0, 3 += '(', ')' # insert '(' at index 0, ')' at index 3
-         e/add ::= 0, 3 -= '(', ')' # remove '(' at index 0, ')' at index 3
-    insertion/removal of non-terminals
+         e/add ::= 0, 3 -=          # remove any children at indices 0 and 3
+         e/add ::= 0, 3 -= '(', ')' # remove child '(' at index 0, child ')' at index 3
+         # non-terminals
          e/add ::= 0..1 += lhs1, lhs2
-         e/add ::= 0..1 -= lhs1, <lhs2 I really need here>
+         e/add ::= 0..1 -= lhs1, <lhs2 I really need spaces in>
             # <> are just symbols markers to allow spaces like SLIF
     # rule-to-rule correspondence
     # no rule-to-rule correspondence, some transfer rules are needed
@@ -252,10 +265,10 @@ my $tests = {
 my $transducers = {
     infix => {
         postfix => q{
-            e/add ::=   1, 2 = 2, 1
-            e/mul ::=   1, 2 = 2, 1
-            e/add ::=   0, 3 += '(', ')'
-            e/mul ::=   0, 3 -= '(', ')'
+            # swap operand and operator
+            e/add, e/mul ::= int, plus = plus, int
+            # add parens
+            e/add, e/mul ::= 0, 3 += '(', ')'
         }
     }
 };
@@ -287,7 +300,7 @@ for my $source (sort keys %$tests){
         # now, parsing source inputs with $sltg should produce target's ASTs
         for my $i (0 .. @$source_inputs - 1){
             # parse source input with translation grammar
-            eval { $sltr->read(\$si) } || warn "$@\nProgress report is:\n" . $sltr->show_progress;
+#            eval { $sltr->read(\$si) } || warn "$@\nProgress report is:\n" . $sltr->show_progress;
             # transform ast with transducer grammar
             # test
         }
