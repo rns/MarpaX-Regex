@@ -224,46 +224,38 @@ my $tests = {
     ],
 };
 
-=pod Given 2 BNFs, build a BNF, which translates BNF1 to BNF2
+=pod Given 2 BNFs, describe transformations from BNF1 AST to BNF2 AST
 
-    2. For all rules with the same LHS (or otherwise defined semantic equivalent rules)
-       # existing rules
-        rearrangement of (non-)terminals
-             e/add ::= 1 = 2
-             e/mul ::= 2 = 1
-             e/add ::= 1, 2 = 2, 1
-             source_lhs[1], source_lhs[2] = source_lhs[2], source_lhs[1]
-        substitution
-             e/mul ::= source_lhs = target_lhs
-             e/add ::= 0..3 = target_lhs
-             e/mul ::= 0..1 = target_lhs1, target_lhs2
-        insertion/removal of terminals
-             e/add ::= 0, 3 += '(', ')' # insert '(' at index 0, ')' at index 3
-             e/add ::= 0, 3 -= '(', ')' # remove '(' at index 0, ')' at index 3
-        insertion/removal of non-terminals
-             e/add ::= 0..1 += lhs1, lhs2
-             e/add ::= 0..1 -= lhs1, <lhs2 I really need here>
-                # <> are just symbols markers to allow spaces like SLIF
-        # rule-to-rule correspondence
-        # no rule-to-rule correspondence, some transfer rules are needed
-             the above operations are on the children of a parent node
+    rearrangement
+         e/add ::= 1 = 2            # indices
+         e/mul ::= 2 = 1
+         e/add ::= 1, 2 = 2, 1
+         # node_id lhs[index] in children array
+         e/add ::= source_lhs[1], source_lhs[2] = source_lhs[2], source_lhs[1]
+    substitution
+         e/mul ::= source_lhs = target_lhs
+         e/add ::= 0..3 = target_lhs
+         e/mul ::= 0..1 = target_lhs1, target_lhs2
+    insertion/removal of terminals
+         e/add ::= 0, 3 += '(', ')' # insert '(' at index 0, ')' at index 3
+         e/add ::= 0, 3 -= '(', ')' # remove '(' at index 0, ')' at index 3
+    insertion/removal of non-terminals
+         e/add ::= 0..1 += lhs1, lhs2
+         e/add ::= 0..1 -= lhs1, <lhs2 I really need here>
+            # <> are just symbols markers to allow spaces like SLIF
+    # rule-to-rule correspondence
+    # no rule-to-rule correspondence, some transfer rules are needed
+         the above operations are on the children of a parent node
 
 =cut
 
-my $translation_grammars = {
+my $transducers = {
     infix => {
         postfix => q{
-
-                    # infix
-            e   ::= int plus int rank => -1 |
-                    int star int rank => -1 |
-                    # postfix
-                    '(' int int plus ')' rank => 0 |
-                    '(' int int star ')' rank => 0
-            int  ~ [\d]
-            plus ~ '+'
-            star ~ '*'
-
+            e/add ::=   1, 2 = 2, 1
+            e/mul ::=   1, 2 = 2, 1
+            e/add ::=   0, 3 += '(', ')'
+            e/mul ::=   0, 3 -= '(', ')'
         }
     }
 };
@@ -278,30 +270,26 @@ for my $source (sort keys %$tests){
 
         next if $source eq $target; # translation into itself is trivial :)
 
-        my $tg = $translation_grammars->{$source}->{$target};
+        my $tg = $transducers->{$source}->{$target};
         next unless defined $tg; # skip non-existing tables
 
         diag "$source -> $target";
-        # scanless translation grammar
+        # prepare transducer
+        # parse transducer grammar
         $tg = $grammar_prolog . $tg . $grammar_epilog;
         my $sltg = Marpa::R2::Scanless::G->new( { source  => \$tg } );
+        my $sltr = Marpa::R2::Scanless::R->new( {
+            grammar => $sltg,
+            ranking_method => 'high_rule_only',
+            trace_terminals => 0,
+        } );
 
         # now, parsing source inputs with $sltg should produce target's ASTs
         for my $i (0 .. @$source_inputs - 1){
-
-            # scanless translation recognizer
-            my $sltr = Marpa::R2::Scanless::R->new( {
-                grammar => $sltg,
-                ranking_method => 'high_rule_only',
-                trace_terminals => 0,
-            } );
-
             # parse source input with translation grammar
-            my $si = $source_inputs->[ $i ];
             eval { $sltr->read(\$si) } || warn "$@\nProgress report is:\n" . $sltr->show_progress;
-
-            diag "parsed " . ( $sltr->ambiguous() ? 'ambiguously' : 'unambiguously' );
-            warn Dumper ${ $sltr->value() };
+            # transform ast with transducer grammar
+            # test
         }
     }
 }
