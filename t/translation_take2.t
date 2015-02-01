@@ -273,17 +273,17 @@ my $tdslg_source = q{
 :default ::= action => [ name, values ]
 lexeme default = action => [ name, values ] latm => 1
 
+    rule ::= <symbol list> '::=' expr
+
     expr ::=
-           tree
-        || <indexed literal> | <indexed symbol>
-        || <index list> | <index range>
+           tree | literal | symbol
+        | <indexed literal> | <indexed symbol>
+        | <index list> | <index range>
 
-    tree ::=
-            <tree primary>
-          | '[' tree ']' assoc => group
-         || tree ',' tree  assoc => left
 
-    <tree primary> ::= literal | symbol
+    tree ::= '[' <node list> ']'
+    <node list> ::= <node list item>+ separator => [,]
+    <node list item> ::= tree | literal | symbol
 
     literal ::= ( <double quote> ) <not double quotes> ( <double quote> )
     <double quote> ~ ["] #"
@@ -302,9 +302,11 @@ lexeme default = action => [ name, values ] latm => 1
     <symbol name> ::= <bare name>
     <symbol name> ::= <bracketed name>
     <bare name> ~ [^0-9'"\s] <word chars> #'
-    <word chars> ~ [\w]+
+    <word chars> ~ [\w]*
     <bracketed name> ~ '<' <bracketed name string> '>'
     <bracketed name string> ~ [\s\w]+
+
+    <symbol list> ::= symbol+ separator => [,]
 
     <indexed symbol> ::= symbol ('[') <index range> (']')
     <indexed symbol> ::= symbol ('[') <index list> (']')
@@ -322,22 +324,22 @@ whitespace ~ [\s+]
 my $tdslg = Marpa::R2::Scanless::G->new( { source  => \$tdslg_source } );
 
 my $tdsl_tests = [
-    [ q{ ')'    },'literal' ] ,
-    [ q{ plus   },'symbol' ],
-    [ q{ 0  },'index 0' ] ,
-    [ q{ 0, 1   },'index list: 0, 1' ] ,
-    [ q{ 0..1   },'index range: 0:1' ] ,
-    [ q{ '(' [1]    },"literal '(' at index 1" ] ,
-    [ q{ '(' [1,3]  },"literal '(' at indices 1 and 3" ],
-    [ q{ '(' [1..3]     },"literal '(' at indices from 1 to 3" ],
-    [ q{ '(' [1..-1]    },"literal '(' at indices from 1 to the last" ],
-    [ q{ plus[2]    },'symbol at index 2' ] ,
-    [ q{ plus[2,1]  },'symbol at indices 2 and 1' ],
-    [ q{ plus[2,1,0]    },'symbol at indices 2 and 1' ],
-    [ q{ plus[2..-1]    },'symbol at indices 2 and 1' ],
+    [ q{ s ::= ')'    },'literal' ] ,
+    [ q{ s ::= plus   },'symbol' ],
+    [ q{ s ::= 0  },'index 0' ] ,
+    [ q{ s ::= 0, 1   },'index list: 0, 1' ] ,
+    [ q{ s ::= 0..1   },'index range: 0:1' ] ,
+    [ q{ s ::= '(' [1]    },"literal '(' at index 1" ] ,
+    [ q{ s ::= '(' [1,3]  },"literal '(' at indices 1 and 3" ],
+    [ q{ s ::= '(' [1..3]     },"literal '(' at indices from 1 to 3" ],
+    [ q{ s ::= '(' [1..-1]    },"literal '(' at indices from 1 to the last" ],
+    [ q{ s ::= plus[2]    },'symbol at index 2' ] ,
+    [ q{ s ::= plus[2,1]  },'symbol at indices 2 and 1' ],
+    [ q{ s ::= plus[2,1,0]    },'symbol at indices 2 and 1' ],
+    [ q{ s ::= plus[2..-1]    },'symbol at indices 2 and 1' ],
 
-    [ q{ s1, s2, s3     },'symbol list' ],
-    [ q{ [ s1, s2, 'l1', [ s1, 'l1', s2 ], s3 ]     }, 'tree' ],
+    [ q{ s ::= [ s1, s2, s3 ]    },'symbol list' ],
+    [ q{ s ::= [ s1, s2, 'l1', [ s1, 'l1', s2 ], s3 ]     }, 'tree' ],
 
 ];
 
