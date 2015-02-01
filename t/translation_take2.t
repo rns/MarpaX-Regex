@@ -273,6 +273,8 @@ my $tdslg_source = q{
 :default ::= action => [ name, values ]
 lexeme default = action => [ name, values ] latm => 1
 
+#    rule = tree '::=' expr '=' expr
+
     expr ::=
            tree
         || <indexed literal> | <indexed symbol>
@@ -301,7 +303,7 @@ lexeme default = action => [ name, values ] latm => 1
     symbol ::= <symbol name> # from metag.bnf
     <symbol name> ::= <bare name>
     <symbol name> ::= <bracketed name>
-    <bare name> ~ [^0-9'"] <word chars>
+    <bare name> ~ [^0-9'"\s] <word chars> #'
     <word chars> ~ [\w]+
     <bracketed name> ~ '<' <bracketed name string> '>'
     <bracketed name string> ~ [\s\w]+
@@ -322,26 +324,29 @@ whitespace ~ [\s+]
 my $tdslg = Marpa::R2::Scanless::G->new( { source  => \$tdslg_source } );
 
 my $tdsl_tests = [
-    [ "')'", 'literal' ] ,
-    [ 'plus', 'symbol' ],
-    [ '0', 'index 0' ] ,
-    [ '0, 1', 'index list 0, 1' ] ,
-    [ '0..1', 'index range 0:1' ] ,
-    [ "'(' [1]", "literal '(' at index 1" ] ,
-    [ "'(' [1,3]", "literal '(' at indices 1 and 3" ],
-    [ "'(' [1..3]", "literal '(' at indices from 1 to 3" ],
-    [ "'(' [1..-1]", "literal '(' at indices from 1 to the last" ],
-    [ "plus[2]", 'symbol at index 2' ] ,
-    [ "plus[2,1]", 'symbol at indices 2 and 1' ],
-    [ "plus[2,1,0]", 'symbol at indices 2 and 1' ],
-    [ "plus[2..-1]", 'symbol at indices 2 and 1' ],
+    [ q{ ')'    },'literal' ] ,
+    [ q{ plus   },'symbol' ],
+    [ q{ 0  },'index 0' ] ,
+    [ q{ 0, 1   },'index list: 0, 1' ] ,
+    [ q{ 0..1   },'index range: 0:1' ] ,
+    [ q{ '(' [1]    },"literal '(' at index 1" ] ,
+    [ q{ '(' [1,3]  },"literal '(' at indices 1 and 3" ],
+    [ q{ '(' [1..3]     },"literal '(' at indices from 1 to 3" ],
+    [ q{ '(' [1..-1]    },"literal '(' at indices from 1 to the last" ],
+    [ q{ plus[2]    },'symbol at index 2' ] ,
+    [ q{ plus[2,1]  },'symbol at indices 2 and 1' ],
+    [ q{ plus[2,1,0]    },'symbol at indices 2 and 1' ],
+    [ q{ plus[2..-1]    },'symbol at indices 2 and 1' ],
 
-    [ "[ s1, s2, 'l1', [ s1, 'l1', s2 ], s3 ]", 'subtree' ],
+    [ q{ s1, s2, s3     },'symbol list' ],
+    [ q{ [ s1, s2, 'l1', [ s1, 'l1', s2 ], s3 ]     }, 'tree' ],
 
 ];
 
 for my $test (@$tdsl_tests){
     my ($tdsl_source, $name) = @$test;
+    $tdsl_source =~ s/^\s+//;
+    $tdsl_source =~ s/\s+$//;
     diag "$tdsl_source, $name";
     my $tdslr = Marpa::R2::Scanless::R->new( {
         grammar  => $tdslg,
