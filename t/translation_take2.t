@@ -279,13 +279,12 @@ lexeme default = action => [ name, values ] latm => 1
         || <index list> | <index range>
 
     tree ::=
-          <node list>
-        | '[' tree ']'
+            <tree primary>
+          | '[' tree ']' assoc => group
+         || tree ',' tree  assoc => left
 
-    <node list> ::= <node list item>+ separator => [,]
-    <node list item> ::= literal | symbol
+    <tree primary> ::= literal | symbol
 
-    <literal list> ::= literal+ separator => [,]
     literal ::= ( <double quote> ) <not double quotes> ( <double quote> )
     <double quote> ~ ["] #"
     <not double quotes> ~ <not double quote>+
@@ -299,12 +298,10 @@ lexeme default = action => [ name, values ] latm => 1
     <indexed literal> ::= literal ('[') <index range> (']')
     <indexed literal> ::= literal ('[') <index list> (']')
 
-    <symbol list> ::= symbol+ separator => [,]
-
     symbol ::= <symbol name> # from metag.bnf
     <symbol name> ::= <bare name>
     <symbol name> ::= <bracketed name>
-    <bare name> ~ <word chars>
+    <bare name> ~ [^0-9'"] <word chars>
     <word chars> ~ [\w]+
     <bracketed name> ~ '<' <bracketed name string> '>'
     <bracketed name string> ~ [\s\w]+
@@ -348,7 +345,7 @@ for my $test (@$tdsl_tests){
     diag "$tdsl_source, $name";
     my $tdslr = Marpa::R2::Scanless::R->new( {
         grammar  => $tdslg,
-        trace_terminals => 99,
+        trace_terminals => 1,
     } );
     eval { $tdslr->read(\$tdsl_source) } || warn "$@\nProgress report is:\n" . $tdslr->show_progress;
     ok !$@, 'parsed';
