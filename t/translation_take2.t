@@ -273,8 +273,6 @@ my $tdslg_source = q{
 :default ::= action => [ name, values ]
 lexeme default = action => [ name, values ] latm => 1
 
-#    rule = tree '::=' expr '=' expr
-
     expr ::=
            tree
         || <indexed literal> | <indexed symbol>
