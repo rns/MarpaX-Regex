@@ -224,6 +224,9 @@ my $tests = {
     ],
 };
 
+#
+# Transform DSL
+#
 =pod Given 2 BNFs, describe transformations from BNF1 AST to BNF2 AST
 
 # children of a given AST node id
@@ -256,12 +259,90 @@ my $tests = {
          e/add ::= 0..1 += lhs1, lhs2
          e/add ::= 0..1 -= lhs1, <lhs2 I really need spaces in>
             # <> are just symbols markers to allow spaces like SLIF
+         # subtrees
+         e/add ::= 1 = [ 'literal', symbol, [ '' ], 'literal', [ s1, '' ] ]
+
     # rule-to-rule correspondence
     # no rule-to-rule correspondence, some transfer rules are needed
          the above operations are on the children of a parent node
 
 =cut
 
+my $tdslg_source = q{
+
+:default ::= action => [ name, values ]
+lexeme default = action => [ name, values ] latm => 1
+
+    expr ::=
+           literal | symbol
+        || <indexed literal> | <indexed symbol>
+        || <index list> | <index range>
+
+    literal ::= ( <double quote> ) <not double quotes> ( <double quote> )
+    <double quote> ~ ["] #"
+    <not double quotes> ~ [^"]+ #"
+
+    literal ::= ( <single quote> ) <not single quotes> ( <single quote> )
+    <single quote> ~ ['] #'
+    <not single quotes> ~ [^']+ #'
+
+    <indexed literal> ::= literal ('[') <index range> (']')
+    <indexed literal> ::= literal ('[') <index list> (']')
+
+    symbol ::= <symbol name> # from metag.bnf
+    <symbol name> ::= <bare name>
+    <symbol name> ::= <bracketed name>
+    <bare name> ~ <not digit> <word chars>
+    <word chars> ~ [\w]+
+    <not digit> ~ [^0-9]
+    <bracketed name> ~ '<' <bracketed name string> '>'
+    <bracketed name string> ~ [\s\w]+
+
+    <indexed symbol> ::= symbol ('[') <index range> (']')
+    <indexed symbol> ::= symbol ('[') <index list> (']')
+
+    <index list> ::= index+ separator => [,]
+    <index range> ::= index ('..') index
+    index ~ [\d]+
+
+:discard ~ whitespace
+whitespace ~ [\s+]
+
+};
+
+my $tdslg = Marpa::R2::Scanless::G->new( { source  => \$tdslg_source } );
+
+my $tdsl_tests = [
+    [ "')'", 'literal' ] ,
+    [ 'plus', 'symbol' ],
+    [ '0', 'index 0' ] ,
+    [ '0, 1', 'index list 0, 1' ] ,
+    [ '0..1', 'index range 0:1' ] ,
+    [ "'(' [1]", "literal '(' at index 1" ] ,
+    [ "'(' [1,3]", "literal '(' at indices 1 and 3" ],
+    [ "plus[2]", 'symbol at index 2' ] ,
+    [ "plus[2,1]", 'symbol at indices 2 and 1' ],
+];
+
+for my $test (@$tdsl_tests){
+    my ($tdsl_source, $name) = @$test;
+    diag "$tdsl_source, $name";
+    my $tdslr = Marpa::R2::Scanless::R->new( {
+        grammar  => $tdslg,
+        trace_terminals => 1,
+    } );
+    eval { $tdslr->read(\$tdsl_source) } || warn "$@\nProgress report is:\n" . $tdslr->show_progress;
+    is $tdslr->ambiguity_metric(), 1, "parsed unambiguously";
+    while (my $value_ref = $tdslr->value()){
+        diag Dumper ${ $value_ref };
+    }
+}
+done_testing();
+exit;
+
+#
+# Transducers
+#
 my $transducers = {
     infix => {
         postfix => q{
@@ -293,7 +374,6 @@ for my $source (sort keys %$tests){
         my $sltg = Marpa::R2::Scanless::G->new( { source  => \$tg } );
         my $sltr = Marpa::R2::Scanless::R->new( {
             grammar => $sltg,
-            ranking_method => 'high_rule_only',
             trace_terminals => 0,
         } );
 
