@@ -274,27 +274,38 @@ my $tdslg_source = q{
 lexeme default = action => [ name, values ] latm => 1
 
     expr ::=
-           literal | symbol
+           tree
         || <indexed literal> | <indexed symbol>
         || <index list> | <index range>
 
+    tree ::=
+          <node list>
+        | '[' tree ']'
+
+    <node list> ::= <node list item>+ separator => [,]
+    <node list item> ::= literal | symbol
+
+    <literal list> ::= literal+ separator => [,]
     literal ::= ( <double quote> ) <not double quotes> ( <double quote> )
     <double quote> ~ ["] #"
-    <not double quotes> ~ [^"]+ #"
+    <not double quotes> ~ <not double quote>+
+    <not double quote> ~ [^"]+ #"
 
     literal ::= ( <single quote> ) <not single quotes> ( <single quote> )
     <single quote> ~ ['] #'
-    <not single quotes> ~ [^']+ #'
+    <not single quotes> ~ <not single quote>+ #'
+    <not single quote> ~ [^'] #'
 
     <indexed literal> ::= literal ('[') <index range> (']')
     <indexed literal> ::= literal ('[') <index list> (']')
 
+    <symbol list> ::= symbol+ separator => [,]
+
     symbol ::= <symbol name> # from metag.bnf
     <symbol name> ::= <bare name>
     <symbol name> ::= <bracketed name>
-    <bare name> ~ <not digit> <word chars>
+    <bare name> ~ <word chars>
     <word chars> ~ [\w]+
-    <not digit> ~ [^0-9]
     <bracketed name> ~ '<' <bracketed name string> '>'
     <bracketed name string> ~ [\s\w]+
 
@@ -303,6 +314,7 @@ lexeme default = action => [ name, values ] latm => 1
 
     <index list> ::= index+ separator => [,]
     <index range> ::= index ('..') index
+    <index range> ::= index ('..') '-1'
     index ~ [\d]+
 
 :discard ~ whitespace
@@ -320,8 +332,15 @@ my $tdsl_tests = [
     [ '0..1', 'index range 0:1' ] ,
     [ "'(' [1]", "literal '(' at index 1" ] ,
     [ "'(' [1,3]", "literal '(' at indices 1 and 3" ],
+    [ "'(' [1..3]", "literal '(' at indices from 1 to 3" ],
+    [ "'(' [1..-1]", "literal '(' at indices from 1 to the last" ],
     [ "plus[2]", 'symbol at index 2' ] ,
     [ "plus[2,1]", 'symbol at indices 2 and 1' ],
+    [ "plus[2,1,0]", 'symbol at indices 2 and 1' ],
+    [ "plus[2..-1]", 'symbol at indices 2 and 1' ],
+
+    [ "[ s1, s2, 'l1', [ s1, 'l1', s2 ], s3 ]", 'subtree' ],
+
 ];
 
 for my $test (@$tdsl_tests){
@@ -329,9 +348,10 @@ for my $test (@$tdsl_tests){
     diag "$tdsl_source, $name";
     my $tdslr = Marpa::R2::Scanless::R->new( {
         grammar  => $tdslg,
-        trace_terminals => 1,
+        trace_terminals => 99,
     } );
     eval { $tdslr->read(\$tdsl_source) } || warn "$@\nProgress report is:\n" . $tdslr->show_progress;
+    ok !$@, 'parsed';
     is $tdslr->ambiguity_metric(), 1, "parsed unambiguously";
     while (my $value_ref = $tdslr->value()){
         diag Dumper ${ $value_ref };
