@@ -273,7 +273,11 @@ my $tdslg_source = q{
 :default ::= action => [ name, values ]
 lexeme default = action => [ name, values ] latm => 1
 
-    rule ::= <symbol list> '::=' expr
+    rule ::= <symbol list> '::=' op
+
+    op ::= <symbol list> '=' <node list>
+    op ::= <index list> '+=' <node list>
+    op ::= expr # sink rule
 
     expr ::=
            tree | literal | symbol
@@ -285,15 +289,11 @@ lexeme default = action => [ name, values ] latm => 1
     <node list> ::= <node list item>+ separator => [,]
     <node list item> ::= tree | literal | symbol
 
-    literal ::= ( <double quote> ) <not double quotes> ( <double quote> )
-    <double quote> ~ ["] #"
-    <not double quotes> ~ <not double quote>+
-    <not double quote> ~ [^"]+ #"
+    literal ::= ( ["] ) <string without double quotes> ( ["] )
+    <string without double quotes> ~ [^"]+ # "
 
-    literal ::= ( <single quote> ) <not single quotes> ( <single quote> )
-    <single quote> ~ ['] #'
-    <not single quotes> ~ <not single quote>+ #'
-    <not single quote> ~ [^'] #'
+    literal ::= ( ['] ) <string without single quotes> ( ['] )
+    <string without single quotes> ~ [^']+ #'
 
     <indexed literal> ::= literal ('[') <index range> (']')
     <indexed literal> ::= literal ('[') <index list> (']')
@@ -302,7 +302,7 @@ lexeme default = action => [ name, values ] latm => 1
     <symbol name> ::= <bare name>
     <symbol name> ::= <bracketed name>
     <bare name> ~ [^0-9'"\s] <word chars> #'
-    <word chars> ~ [\w]*
+    <word chars> ~ [\w/]*
     <bracketed name> ~ '<' <bracketed name string> '>'
     <bracketed name string> ~ [\s\w]+
 
@@ -324,6 +324,8 @@ whitespace ~ [\s+]
 my $tdslg = Marpa::R2::Scanless::G->new( { source  => \$tdslg_source } );
 
 my $tdsl_tests = [
+    [ q{ e/add, e/mul ::= int, plus = plus, int }, 'infix -> postfix rule 1' ] ,
+    [ q{ e/add, e/mul ::= 0, 3 += '(', ')' }, 'infix -> postfix rule 1' ] ,
     [ q{ s ::= ')'    },'literal' ] ,
     [ q{ s ::= plus   },'symbol' ],
     [ q{ s ::= 0  },'index 0' ] ,
