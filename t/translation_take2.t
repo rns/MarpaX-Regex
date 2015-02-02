@@ -277,7 +277,9 @@ lexeme default = action => [ name, values ] latm => 1
 
     op ::= <symbol list> '=' <node list>
     op ::= <index list> '+=' <node list>
-    op ::= expr # sink rule
+
+    # sink rule
+    op ::= expr
 
     expr ::=
            tree | literal | symbol
@@ -298,11 +300,12 @@ lexeme default = action => [ name, values ] latm => 1
     <indexed literal> ::= literal ('[') <index range> (']')
     <indexed literal> ::= literal ('[') <index list> (']')
 
-    symbol ::= <symbol name> # from metag.bnf
+    symbol ::= <symbol name> # adapted from metag.bnf
+    # add paths '/',  /e-add/
     <symbol name> ::= <bare name>
     <symbol name> ::= <bracketed name>
     <bare name> ~ [^0-9'"\s] <word chars> #'
-    <word chars> ~ [\w/]*
+    <word chars> ~ [-\w/]*
     <bracketed name> ~ '<' <bracketed name string> '>'
     <bracketed name string> ~ [\s\w]+
 
@@ -323,9 +326,13 @@ whitespace ~ [\s+]
 
 my $tdslg = Marpa::R2::Scanless::G->new( { source  => \$tdslg_source } );
 
+# - lhs/name for rhs alternative; not name -- use number, e.g /e-1
+# just go xpath? xpath_expr ::= expr
 my $tdsl_tests = [
-    [ q{ e/add, e/mul ::= int, plus = plus, int }, 'infix -> postfix rule 1' ] ,
-    [ q{ e/add, e/mul ::= 0, 3 += '(', ')' }, 'infix -> postfix rule 1' ] ,
+    # root node
+    [ q{ /e-add, /e-mul ::= int, plus = plus, int }, 'infix -> postfix rule 1' ] ,
+    # any node with id e-add (rule lhs is e, rhs alternative name is add
+    [ q{ e-add, e-mul ::= 0, 3 += '(', ')' }, 'infix -> postfix rule 1' ] ,
     [ q{ s ::= ')'    },'literal' ] ,
     [ q{ s ::= plus   },'symbol' ],
     [ q{ s ::= 0  },'index 0' ] ,
@@ -360,6 +367,7 @@ for my $test (@$tdsl_tests){
     while (my $value_ref = $tdslr->value()){
         diag Dumper ${ $value_ref };
     }
+    # walk the rules and execute the op's
 }
 done_testing();
 exit;
