@@ -17,9 +17,6 @@ lexeme default = action => [ name, value ] latm => 1
 
     statements ::= statement+
 
-    # character escapes
-    <character escape> ~ '\d' | '\w'
-
     # literals
     literal ::= ( ["] ) <string without double quotes> ( ["] )
     literal ::= ( ['] ) <string without single quotes> ( ['] )
@@ -28,10 +25,26 @@ lexeme default = action => [ name, value ] latm => 1
 
     # character classes
     <character class> ::= '[' <character class characters> ']'
-    <character class> ::= <character escape>
     <character class characters> ~ <character class character>+
     <character class character> ~ [^\]] | '\[' | '\]' | '[:' | ':]'
 
+    symbol ::= <symbol name> # adapted from metag.bnf
+    <symbol name> ::= <bare name>
+    <symbol name> ::= <bracketed name>
+    <bare name> ~ [^0-9'"\[\]\\\*\+\{\}\?\(\)\|\^\$\.\s] <word chars> #'
+    <word chars> ~ [\w]*
+    <bracketed name> ~ '<' <bracketed name string> '>'
+    <bracketed name string> ~ [\s\.\w]+
+
+    atom ::= literal
+        | <character class>
+        | <character escape>
+        | symbol
+        | metacharacter
+        | quantifier
+
+    metacharacter ~ '^' | '$' | '.' | [\\\\] | '|'
+    <character escape> ~ '\d' | '\w'
     quantifier ::=
              '*'  | '+'  | '?'
         |    '*?' | '+?' | '??'
@@ -48,18 +61,7 @@ lexeme default = action => [ name, value ] latm => 1
 
     <unsigned integer> ~ [\d]+ # todo: enforce no [+-]
     comma ~ ','
-    boolean ~ [01]
-
-    symbol ::= <symbol name> # adapted from metag.bnf
-    <symbol name> ::= <bare name>
-    <symbol name> ::= <bracketed name>
-    <bare name> ~ [^0-9'"\[\]\\\*\+\{\}\?\(\)\|\^\$\.\s] <word chars> #'
-    <word chars> ~ [\w]*
-    <bracketed name> ~ '<' <bracketed name string> '>'
-    <bracketed name string> ~ [\s\.\w]+
-
-    atom ::= literal | <character class> | symbol | metacharacter | quantifier
-    metacharacter ~ '^' | '$' | '.'
+#    boolean ~ [01]
 
     # grouping and alternation
     group ::=
@@ -69,28 +71,28 @@ lexeme default = action => [ name, value ] latm => 1
 #        || atom group
 #        || '|' group
 #        || group '|'
-        || group '|' group
+#        || group '|' group
         || group group
 
     # statements
-    statement ::= <empty rule> | <alternative rule> | <quantified rule>
+    statement ::= <empty rule> | <alternative rule> #| <quantified rule>
 
     <empty rule> ::= lhs (<op declare bnf>)
     <alternative rule> ::= lhs (<op declare bnf>) alternatives
-    <quantified rule> ::= lhs (<op declare bnf>) <single symbol> quantifier <adverb list>
-    <quantified rule> ::= lhs (<op declare bnf>) <single symbol> quantifier
+#    <quantified rule> ::= lhs (<op declare bnf>) <single symbol> quantifier <adverb list>
+#    <quantified rule> ::= lhs (<op declare bnf>) <single symbol> quantifier
 
     alternatives ::= group
 
-    <adverb list> ::= <adverb list items>
-    <adverb list items> ::= <adverb item>*
-    <adverb item> ::= <separator specification> | <proper specification>
+#    <adverb list> ::= <adverb list items>
+#    <adverb list items> ::= <adverb item>*
+#    <adverb item> ::= <separator specification> | <proper specification>
 
-    <separator specification> ::= ('separator' '=>') <single symbol>
-    <proper specification> ::= ('proper' '=>') boolean
+#    <separator specification> ::= ('separator' '=>') <single symbol>
+#    <proper specification> ::= ('proper' '=>') boolean
 
     lhs ::= <symbol name>
-    <single symbol> ::= symbol
+#    <single symbol> ::= symbol
 
     <op declare bnf> ~ '::='
 
