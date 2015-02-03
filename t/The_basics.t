@@ -18,18 +18,18 @@ lexeme default = action => [ name, value ] latm => 1
     statements ::= statement+
 
     # character escapes
-    <character escape> ~ '\d'
+    <character escape> ~ '\d' | '\w'
 
     # literals
     literal ::= ( ["] ) <string without double quotes> ( ["] )
     literal ::= ( ['] ) <string without single quotes> ( ['] )
-    <string without double quotes> ~ [^"]+ #"
-    <string without single quotes> ~ [^']+ #'
-    literal ::= <character escape>
+    <string without double quotes> ~ [^\^\$\."]+ #"
+    <string without single quotes> ~ [^\^\$\.']+ #'
 
     # character classes
     <character class> ::= '[' <character class characters> ']' quantifier
     <character class> ::= '[' <character class characters> ']'
+    <character class> ::= <character escape>
     <character class characters> ~ <character class character>+
     <character class character> ~ [^\]] | '\[' | '\]' | '[:' | ':]'
 
@@ -54,22 +54,24 @@ lexeme default = action => [ name, value ] latm => 1
     symbol ::= <symbol name> # adapted from metag.bnf
     <symbol name> ::= <bare name>
     <symbol name> ::= <bracketed name>
-    <bare name> ~ [^0-9'"\[\]\\\*\+\{\}\?\(\)\|\s] <word chars> #'
+    <bare name> ~ [^0-9'"\[\]\\\*\+\{\}\?\(\)\|\^\$\.\s] <word chars> #'
     <word chars> ~ [\w]*
     <bracketed name> ~ '<' <bracketed name string> '>'
-    <bracketed name string> ~ [\s\w]+
+    <bracketed name string> ~ [\s\.\w]+
 
-    atom ::= literal | <character class> | symbol
+    atom ::= literal | <character class> | symbol | metacharacter
+    metacharacter ~ '^' | '$' | '.'
 
     # grouping and alternation
     group ::=
             atom
         | '(' group ')' assoc => group
-        || group atom
-        || atom group
-        || group '|'
-        || '|' group
+#        || group atom
+#        || atom group
+#        || '|' group
+#        || group '|'
         || group '|' group
+        || group group
 
     # statements
     statement ::= <empty rule> | <alternative rule> | <quantified rule>
@@ -95,6 +97,14 @@ lexeme default = action => [ name, value ] latm => 1
 
 :discard ~ whitespace
     whitespace ~ [\s]+
+
+:discard ~ <hash comment>
+    <hash comment> ~ <terminated hash comment> | <unterminated final hash comment>
+    <terminated hash comment> ~ '#' <hash comment body> <vertical space char>
+    <unterminated final hash comment> ~ '#' <hash comment body>
+    <hash comment body> ~ <hash comment char>*
+    <vertical space char> ~ [\x{A}\x{B}\x{C}\x{D}\x{2028}\x{2029}]
+    <hash comment char> ~ [^\x{A}\x{B}\x{C}\x{D}\x{2028}\x{2029}]
 
 };
 
@@ -142,7 +152,7 @@ my $tests = [
     [ q{ s ::= ( 'ac' | 'b' ) 'b' }, [ 'acb', "bb" ], [ 1, 1 ], [ 'ac', 'b' ], 'grouping' ],
     # matches 'ac' at start of string or 'bc' anywhere
     # todo: test error, e.g. unbalanced parens: ( ('^a'|'b')'c'
-    [ q{ s ::= ('^a'|'b')'c' }, [ 'ac', "bc" ], [ 1, 1 ], [ 'a', 'b' ], 'grouping' ],
+    [ q{ s ::= ( ^ 'a' | 'b' ) 'c' }, [ 'ac', "bc" ], [ 1, 1 ], [ 'a', 'b' ], 'grouping' ],
     # matches 'ad', 'bd', or 'cd'
     [ q{ s ::= ('a'|[bc])'d' }, [ 'ad', 'bd', 'cd' ], [ 1, 1, 1 ], [ 'a', 'b', 'c' ], 'grouping with character class' ],
 
@@ -158,7 +168,7 @@ my $tests = [
         [ 1,      1,      1 ],
         [ '19', '20', '' ],
         'grouping, years' ],
-    # symbols
+    # Building a regexp
     [ q{ s ::= ( nineteen | twenty | ) \d\d
          nineteen ::= '19'
          twenty   ::= '20' },
@@ -166,12 +176,29 @@ my $tests = [
         [ 1,      1,      1 ],
         [ '19', '20', '' ],
         'grouping, years' ],
+    [ q{
+         s ::= ^(<optional sign>)(<f.p. mantissa> | integer)(<optional exponent>)$
+
+         <optional sign> ::= [+-]?
+
+         <f.p. mantissa> ::= \d+\.\d+  # mantissa of the form a.b
+         <f.p. mantissa> ::= \d+\.     # mantissa of the form a.
+         <f.p. mantissa> ::= \.\d+     # mantissa of the form .b
+
+         integer         ::= \d+       # integer of the form a
+
+         <optional exponent> ::= ([eE][+-]?\d+)?
+
+        }, '1.3', 1, '1.3', 'building a regexp, unfactored form' ]
+
 ];
 
-=pod grouping
+=pod
 
-    "20" =~ /(19|20|)\d\d/;  # matches the null alternative '()\d\d',
-                             # because '20\d\d' can't match
+    //;
+
+    /^[+-]?(\d+\.\d+|\d+\.|\.\d+|\d+)([eE][+-]?\d+)?$/;  # Ta da!
+
 =cut
 
 my $slg = Marpa::R2::Scanless::G->new( { source  => \$dsl } );
