@@ -20,8 +20,8 @@ lexeme default = action => [ name, value ] latm => 1
     # literals
     literal ::= ( ["] ) <string without double quotes> ( ["] )
     literal ::= ( ['] ) <string without single quotes> ( ['] )
-    <string without double quotes> ~ [^\^\$\."]+ #"
-    <string without single quotes> ~ [^\^\$\.']+ #'
+    <string without double quotes> ~ [^\^\$"]+ #"
+    <string without single quotes> ~ [^\^\$']+ #'
 
     # character classes
     <character class> ::= '[' <character class characters> ']'
@@ -178,17 +178,25 @@ my $tests = [
         [ '19', '20', '' ],
         'grouping, years' ],
     [ q{
-         s ::= ^(<optional sign>)(<f.p. mantissa> | integer)(<optional exponent>)$
+         number ::=
+             ^
+                (<optional sign>)
+                (<f.p. mantissa> | integer)
+                (<optional exponent>)
+             $
 
          <optional sign> ::= [+-]?
 
-         <f.p. mantissa> ::= \d+\.\d+  # mantissa of the form a.b
-         <f.p. mantissa> ::= \d+\.     # mantissa of the form a.
-         <f.p. mantissa> ::= \.\d+     # mantissa of the form .b
+         <f.p. mantissa> ::=
+                             digit+ '.' digit+  # mantissa of the form a.b
+                           | digit+ '.'     # mantissa of the form a.
+         <f.p. mantissa> ::= '.' digit+     # mantissa of the form .b
 
-         integer         ::= \d+       # integer of the form a
+         integer         ::= digit+       # integer of the form a
 
          <optional exponent> ::= ([eE][+-]?\d+)?
+
+         digit ::= \d
 
         }, '1.3', 1, '1.3', 'building a regexp, unfactored form' ]
 
