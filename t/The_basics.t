@@ -177,35 +177,59 @@ my $tests = [
         [ 1,      1,      1 ],
         [ '19', '20', '' ],
         'grouping, years' ],
+    # /^[+-]?(\d+\.\d+|\d+\.|\.\d+|\d+)([eE][+-]?\d+)?$/
     [ q{
-         number ::=
-             ^
-                (<optional sign>)
-                (<f.p. mantissa> | integer)
-                (<optional exponent>)
-             $
-
-         <optional sign> ::= [+-]?
-
-         <f.p. mantissa> ::= digit+ '.' digit+  # mantissa of the form a.b
-                           | digit+ '.'         # mantissa of the form a.
-         <f.p. mantissa> ::= '.' digit+         # mantissa of the form .b
-
-         integer         ::= digit+             # integer of the form a
-
+         number              ::= ^ (<optional sign>) (<f.p. mantissa> | integer) (<optional exponent>) $
+         <optional sign>     ::= [+-]?
+         <f.p. mantissa>     ::= digit+ '.' digit+  # mantissa of the form a.b
+                               | digit+ '.'         # mantissa of the form a.
+         <f.p. mantissa>     ::= '.' digit+         # mantissa of the form .b
+         integer             ::= digit+             # integer of the form a
          <optional exponent> ::= ([eE][+-]?\d+)?
-
-         digit ::= \d
-
-        }, '1.3', 1, '1.3', 'building a regexp, unfactored form' ]
-
+         digit               ::= \d
+        }, '1.3', 1, '1.3', 'building a regexp, unfactored form' ],
+    [ q{
+         number              ::= ^ (<optional sign>) (<f.p. mantissa> | integer) <optional exponent> $
+         <optional sign>     ::= [+-]?
+         <f.p. mantissa>     ::= integer '.' integer # mantissa of the form a.b
+                               | digit+ '.'          # mantissa of the form a.
+         <f.p. mantissa>     ::= '.' digit+          # mantissa of the form .b
+         integer             ::= integer             # integer of the form a
+         <optional exponent> ::= ([eE][+-]?\d+)?
+         digit               ::= \d
+        }, '1.3', 1, '1.3', 'building a regexp, partially integer-factored form' ],
+    [ q{
+         number              ::= ^ <optional sign> (<f.p. mantissa> | integer) <optional exponent> $
+         <optional sign>     ::= [+-]?
+         <f.p. mantissa>     ::= integer '.' integer  # mantissa of the form a.b
+                               | integer '.'          # mantissa of the form a.
+         <f.p. mantissa>     ::= '.' integer          # mantissa of the form .b
+         integer             ::= integer              # integer of the form a
+         <optional exponent> ::= ([eE][+-]?integer)?
+         integer             ::= digit+
+         digit               ::= \d
+        }, '1.3', 1, '1.3', 'building a regexp, fully integer-factored form' ],
+    # todo: possible feature: infer a more compact form below from the ast
+    #    /^[+-]?\ *(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/;
 ];
 
-=pod
+=pod more tests
 
-    //;
+/^
+            [+-]?\ *      # first, match an optional sign
+            (             # then match integers or f.p. mantissas:
+                    \d+       # start out with a ...
+                    (
+                            \.\d* # mantissa of the form a.b or a.
+                    )?        # ? takes care of integers of the form a
+                  |\.\d+     # mantissa of the form .b
+            )
+            ([eE][+-]?\d+)?  # finally, optionally match an exponent
+      $/x;
 
-    /^[+-]?(\d+\.\d+|\d+\.|\.\d+|\d+)([eE][+-]?\d+)?$/;  # Ta da!
+or written in the compact form,
+
+    /^[+-]?\ *(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/;
 
 =cut
 
@@ -241,10 +265,10 @@ sub translate{
     if (ref $ast){
         my ($node_id, @children) = @$ast;
         if ($node_id eq 'statement'){
-            warn Dumper $node_id, \@children;
+#            warn Dumper $node_id, \@children;
             my $lhs = $children[0]->[1]->[1]->[1]->[1];
-            warn "lhs: ", Dumper $lhs;
-            warn "alternatives: ", Dumper $children[0]->[2];
+#            warn "lhs: ", Dumper $lhs;
+#            warn "alternatives: ", Dumper $children[0]->[2];
             $s .= "(?#$lhs)" . '(?:' . join('', map { translate( $_ ) } $children[0]->[2] ) . ')';
         }
 #        elseif ($node_id eq 'alternatives'){
