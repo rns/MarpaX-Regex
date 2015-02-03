@@ -87,11 +87,11 @@ my $tests = [
     [ q{ [^a-z] { 2 , 3 } + }, 'hello world', '', [], 'non-backtracking 2 or 3 character class' ],
     [ q{ 'lit[a-z]ral' }, 'literal', 1, [ 1 ], 'embedded in literal character class' ],
     # alternation
-    [ q{ 'cat' | 'dog' | 'bird' }, "cats and dogs", 1, [ 1 ], 'alternation of literals: match the first alternative' ],
-    [ q{ 'dog' | 'cat' | 'bird' }, "cats and dogs", 1, [ 1 ], 'alternation of literals: match earlier in the string' ],
-    [ q{ 'c' | 'ca' | 'cat' | "cats" }, "cats", 1, [ 1 ], 'alternation of character classes: match at the first string position' ],
-    [ q{ "cats" | 'cat' | 'ca' | 'c' }, "cats", 1, [ 1 ], 'alternation of character classes: match at the first string position' ],
-    [ q{ [cat]{3} | [dog]+ | [^bird]* }, "cats and dogs", 1, [ 1 ], 'alternation of character classes' ],
+    [ q{ 'cat' | 'dog' | 'bird' }, "cats and dogs", 1, [ 1 ], 'alternation: match literal the first alternative' ],
+    [ q{ 'dog' | "cat" | 'bird' }, "cats and dogs", 1, [ 1 ], 'alternation: match literal earlier in the string' ],
+    [ q{ 'c' | 'ca' | 'cat' | "cats" }, "cats", 1, [ 1 ], 'alternation, match character class at the first string position' ],
+    [ q{ "cats" | 'cat' | 'ca' | 'c' }, "cats", 1, [ 1 ], 'alternation, match character class at the first string position' ],
+    [ q{ [cat]{3} | [dog]+ | [^bird]* }, "cats and dogs", 1, [ 1 ], 'alternation, match character classes' ],
 ];
 
 my $slg = Marpa::R2::Scanless::G->new( { source  => \$dsl } );
