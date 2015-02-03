@@ -17,9 +17,6 @@ lexeme default = action => [ name, value ] latm => 1
 
     expr ::= group
 
-    # metacharacters
-    metacharacter ~ '^' | '$'
-
     # literals
     literal ::= ( ["] ) <string without double quotes> ( ["] )
     literal ::= ( ['] ) <string without single quotes> ( ['] )
@@ -49,19 +46,17 @@ lexeme default = action => [ name, value ] latm => 1
     <unsigned integer> ~ [\d]+ # todo: enforce no [+-]
     comma ~ ','
 
-    # alternation
-#    alternation ::= atom+ separator => [|]
-#    alternation ::= atom | atom '|' alternation
-    atom ::= literal | <character class> | metacharacter
+    atom ::= literal | <character class>
 
-    # grouping
+    # grouping and alternation
     group ::=
             atom
         | '(' group ')' assoc => group
+        || group atom
+        || atom group
+        || group '|'
+        || '|' group
         || group '|' group
-
-#        | '(' group ')' alternation assoc => group
-#        | alternation '(' group ')' assoc => group
 
 :discard ~ whitespace
     whitespace ~ [ ]+
