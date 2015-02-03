@@ -187,12 +187,11 @@ my $tests = [
 
          <optional sign> ::= [+-]?
 
-         <f.p. mantissa> ::=
-                             digit+ '.' digit+  # mantissa of the form a.b
-                           | digit+ '.'     # mantissa of the form a.
-         <f.p. mantissa> ::= '.' digit+     # mantissa of the form .b
+         <f.p. mantissa> ::= digit+ '.' digit+  # mantissa of the form a.b
+                           | digit+ '.'         # mantissa of the form a.
+         <f.p. mantissa> ::= '.' digit+         # mantissa of the form .b
 
-         integer         ::= digit+       # integer of the form a
+         integer         ::= digit+             # integer of the form a
 
          <optional exponent> ::= ([eE][+-]?\d+)?
 
@@ -211,6 +210,28 @@ my $tests = [
 =cut
 
 my $slg = Marpa::R2::Scanless::G->new( { source  => \$dsl } );
+
+=head2 translate pseudocode
+
+    terminal rules      -- RHS has no symbols
+    non-terminals rules -- RHS has at least one symbol
+        -- enforce those rules in the grammar?
+
+    uniqify node IDs
+        $rule_id = qq{$lhs[$rhs_alternative_index]}
+    extract terminal rules ((has no symbols on its rhs)) to substitution table
+        add it to the substitution table as
+        lhs => join '|', @alternatives
+        if lhs already exists in the substitution table,
+        append the rule rhs to its value with '|'
+    remove terminal rules from the tree
+    substitute node IDs with terminal rule contents
+        if there are unsubstituted symbols, warn about them
+    stringify
+        qq{(?#$rule_id)(?:$substituted_contents)}
+        properly indented
+
+=cut
 
 sub translate{
     my ($ast) = @_;
@@ -240,7 +261,6 @@ sub translate{
     return $s;
 }
 
-TESTS:
 for my $test (@$tests){
 
     my ($source, $input, $expected_scalar, $expected_list, $desc) = @$test;
