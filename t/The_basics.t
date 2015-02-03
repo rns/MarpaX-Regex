@@ -18,7 +18,7 @@ lexeme default = action => [ name, value ] latm => 1
     expr ::= group
 
     # metacharacters
-    metacharacter ~ '^' | '$' | '|'
+    metacharacter ~ '^' | '$'
 
     # literals
     literal ::= ( ["] ) <string without double quotes> ( ["] )
@@ -50,15 +50,18 @@ lexeme default = action => [ name, value ] latm => 1
     comma ~ ','
 
     # alternation
-    alternation ::= atom+ separator => [|]
+#    alternation ::= atom+ separator => [|]
+#    alternation ::= atom | atom '|' alternation
     atom ::= literal | <character class> | metacharacter
 
     # grouping
     group ::=
-            alternation
-        | '(' group ')'
-        | '(' group ')' alternation
-        | alternation '(' group ')'
+            atom
+        | '(' group ')' assoc => group
+        || group '|' group
+
+#        | '(' group ')' alternation assoc => group
+#        | alternation '(' group ')' assoc => group
 
 :discard ~ whitespace
     whitespace ~ [ ]+
@@ -130,9 +133,10 @@ sub translate{
     my $indent = "  " x ($depth - 1);
     if (ref $ast){
         my ($node_id, @children) = @$ast;
-        if ($node_id eq 'alternation'){
+        if (0){
+#        if ($node_id eq 'alternation'){
 #            warn Dumper $node_id, \@children;
-            $s .= join '|', map { translate( $_ ) } @children
+#            $s .= join '|', map { translate( $_ ) } @children
         }
         else{
             $s .= join '', map { translate( $_ ) } @children;
@@ -149,12 +153,15 @@ TESTS:
 for my $test (@$tests){
 
     my ($source, $input, $expected_scalar, $expected_list, $desc) = @$test;
+
     $input = [ $input ] unless ref $input eq "ARRAY";
     $expected_scalar = [ $expected_scalar ] unless ref $expected_scalar eq "ARRAY";
     $expected_list = [ $expected_list ] unless ref $expected_list eq "ARRAY";
-    $source =~ s/^\s+|\s+$//g;
+
     my $must_parse   = $desc !~ /BNF parse error expected/;
     my $must_compile = $desc !~ /RE compile error expected/;
+
+    $source =~ s/^\s+|\s+$//g;
     diag "BNF: $source";
 
     # must parse unambiguously unless parse error is expected
@@ -183,7 +190,7 @@ for my $test (@$tests){
 
         skip "BNF source parse error", 3 unless defined $ast and $must_parse;
 
-        warn Dumper $ast;
+#        warn Dumper $ast;
         my $re = translate( $ast );
         diag "RE: /$re/";
 
@@ -204,7 +211,8 @@ for my $test (@$tests){
                 is $got, $exp_scalar, "$desc: scalar-context match";
 
                 my @got = $in =~ /$re/x;
-                is_deeply \@got, [ $exp_list ], "$desc: list-context match";
+                # compare to empty array if no match in list context
+                is_deeply \@got, @got > 0 ? [ $exp_list ] : [], "$desc: list-context match";
 
             } ## for $input ...
         }
