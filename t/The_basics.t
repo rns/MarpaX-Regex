@@ -17,11 +17,15 @@ lexeme default = action => [ name, value ] latm => 1
 
     expr ::= group
 
+    # character escapes
+    <character escape> ~ '\d'
+
     # literals
     literal ::= ( ["] ) <string without double quotes> ( ["] )
     literal ::= ( ['] ) <string without single quotes> ( ['] )
     <string without double quotes> ~ [^"]+ #"
     <string without single quotes> ~ [^']+ #'
+    literal ::= <character escape>
 
     # character classes
     <character class> ::= '[' <character class characters> ']' quantifier
@@ -103,18 +107,31 @@ my $tests = [
     # grouping
     [ q{ ( 'a' | 'b')  }, "ab", 1, [ 'a' ], 'grouping' ],
     [ q{ ( 'a' | 'b' ) 'b' }, "bb", 1, [ 'b' ], 'grouping' ],
+    [ q{ [b] ( 'a' | 'b' ) }, "bb", 1, [ 'b' ], 'grouping' ],
+    [ q{ ( 'ac' | 'b' ) 'b' }, [ 'acb', "bb" ], [ 1, 1 ], [ 'ac', 'b' ], 'grouping' ],
+    # matches 'ac' at start of string or 'bc' anywhere
+    # todo: test error, e.g. unbalanced parens: ( ('^a'|'b')'c'
+    [ q{ ('^a'|'b')'c' }, [ 'ac', "bc" ], [ 1, 1 ], [ 'a', 'b' ], 'grouping' ],
+    # matches 'ad', 'bd', or 'cd'
+    [ q{ ('a'|[bc])'d' }, [ 'ad', 'bd', 'cd' ], [ 1, 1, 1 ], [ 'a', 'b', 'c' ], 'grouping with character class' ],
+
     [ q{ 'house' ( 'cat' | ) }, [ 'housecat', 'house' ], [ 1, 1 ], [ 'cat', '' ], 'grouping, empty alternative' ],
+    [ q{ 'house' ( 'cat' ( 's' |)|) },
+        [ 'housecats',      'housecat',    'house' ],
+        [ 1,                1,             1 ],
+        [ [ 'cats', 's' ],  [ 'cat', '' ], [ '', undef ] ],
+        'grouping, nested' ],
+     # match years 19xx, 20xx, or the Y2K problem, xx
+    [ q{ ('19'|'20'|)\d\d },
+        [ '1901', '2001', '20' ],
+        [ 1,      1,      1 ],
+        [ '19', '20', '' ],
+        'grouping, years' ],
+
 ];
 
 =pod grouping
 
-    (ac|b)b   # matches 'acb' or 'bb'
-    (^a|b)c   # matches 'ac' at start of string or 'bc' anywhere
-    (a|[bc])d # matches 'ad', 'bd', or 'cd'
-    house(cat|)  # matches either 'housecat' or 'house'
-    house(cat(s|)|)  # matches either 'housecats' or 'housecat' or
-                        # 'house'.  Note groups can be nested.
-    (19|20|)\d\d;  # match years 19xx, 20xx, or the Y2K problem, xx
     "20" =~ /(19|20|)\d\d/;  # matches the null alternative '()\d\d',
                              # because '20\d\d' can't match
 =cut
@@ -175,9 +192,13 @@ for my $test (@$tests){
             trace_terminals => 1,
         } );
         eval { $slr->read(\$source) } || warn "$@\nProgress report is:\n" . $slr->show_progress;
-        is $slr->ambiguity_metric(), 1, "BNF parsed unambiguously";
-        while (my $value_ref = $slr->value()){
-            diag Dumper ${ $value_ref };
+        if ( $slr->ambiguity_metric() >= 2 ){
+            diag "BNF parse is ambiguous:\n", $slr->ambiguous();
+            # count or list parses here?
+        }
+        else{
+            my $value_ref = $slr->value();
+            diag "Parse failed, but there is this value:\n", Dumper ${ $value_ref } if defined $value_ref;
         }
     }
 
@@ -195,20 +216,22 @@ for my $test (@$tests){
         SKIP: {
             skip "RE doesn't compile", @$input - 1 unless $re_compiles and $must_compile;
 
-            for my $i (@$input - 1){
+            for my $i (0 .. @$input - 1){
                 my $in = $input->[$i];
                 my $exp_list = $expected_list->[$i];
                 my $exp_scalar = $expected_scalar->[$i];
 
-                diag "input: $in";
+                diag "input $i: $in";
 
                 my $got = $in =~ /$re/x;
                 is $got, $exp_scalar, "$desc: scalar-context match";
 
                 my @got = $in =~ /$re/x;
                 # compare to empty array if no match in list context
-                is_deeply \@got, @got > 0 ? [ $exp_list ] : [], "$desc: list-context match";
-
+                $exp_list = [] if not defined $exp_list;
+                # compare to single-item array if matched in list context
+                $exp_list = [ $exp_list ] unless ref $exp_list;
+                is_deeply \@got, $exp_list, "$desc: list-context match";
             } ## for $input ...
         }
     }
