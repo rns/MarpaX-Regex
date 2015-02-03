@@ -3,6 +3,86 @@
 
 http://blogs.perl.org/users/jean-damien_durand/2014/02/a-marpa-use-case-javascript-regexp-implementation.html
 
+use cases
+    BNF 
+      msvc_warnings.t
+      Marpa::R2 synopsis $R
+    RE  
+      json parser by Randal
+      angle brackets -- Heckeldorn
+    # how to express this thing in the transducer language?
+    # another operation needed
+    intermediate symbols, which reduce to literals or charclasses
+    <op hierarchical substitution> ::= <terminals to be substituted>
+      source:
+        code    ~ 'C' int
+        int     ~ [\d]+
+      target:      
+        code    ~ 'C' [\d]+
+    
+design
+  RE features
+    literals
+    character classes
+    metacharacters
+    quantifiers
+      ? + *
+      {n,m}
+    parens --
+      nesting
+      grouping
+      matching
+      capturing/non-capturing
+        (...) define capture groups, not hiding
+          (sym1 sym2) -> () # unnamed
+          (file) -> (file:) # named
+    backreferences
+      relative
+      named
+    recursion
+  BNF = controlled SLIF, i.e. SLIF except
+    whitespaces are discarded
+    double quotes are supported
+    all symbols must translate to literals or charclasses
+    priority rules as order of matching in |
+    ~ charclasses
+  
+
+RE features: support or not support
+http://perldoc.perl.org/perlretut.html
+Part 1: The basics
+  Simple word matching
+  Using character classes
+  Matching this or that
+  Grouping things and hierarchical matching
+  Extracting matches
+  
+  Backreferences
+  Relative backreferences
+  Named backreferences
+  
+  Alternative capture group numbering
+  Position information
+  Non-capturing groupings
+  Matching repetitions
+  Possessive quantifiers
+  Building a regexp
+  Using regular expressions in Perl
+  
+Part 2: Power tools
+  More on characters, strings, and character classes
+  Compiling and saving regular expressions
+  Composing regular expressions at runtime
+  Embedding comments and modifiers in a regular expression
+  Looking ahead and looking behind
+  Using independent subexpressions to prevent backtracking
+  Conditional expressions
+  Defining named patterns
+  Recursive patterns
+  A bit of magic: executing Perl code in a regular expression
+  Backtracking control verbs
+  Pragmas and debugging
+
 Buzzwords
 ---------
 
@@ -20,22 +100,17 @@ Synopsis
     
     use 5.010;
     
-    my $input; # absolutely need one :)
+    my $re = MarpaX::Regex->new(<<GRAMMAR);
+    ...
+    GRAMMAR
     
-    my $match = MarpaX::Regex->new($match_grammar);
-    $input =~ m/$match/;
-
-    my ( $match, $subst ) = MarpaX::Regex->new($match_grammar, $subst_grammar);
-    $input =~ s/$match/$substitutition/x;
+    my $input = 'what needs to be matched';
+    
+    $input =~ m/$re/x;
+    
+    # $1 etc. captures work as expected
+    $input =~ s/$re/substitution/x;
         
-    my ( $match, $subst ) = MarpaX::Regex->new(<<MATCH_GRAMMAR, <<SUBST_GRAMMAR);
-    ...
-    MATCH_GRAMMAR
-    ...
-    SUBST_GRAMMAR
-
-    $input =~ s/$match/$subst/x;
-    
 Implementation Details
 ----------------------
 
