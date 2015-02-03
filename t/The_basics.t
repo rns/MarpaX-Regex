@@ -15,7 +15,10 @@ my $dsl = q{;
 :default ::= action => [ name, values ]
 lexeme default = action => [ name, value ] latm => 1
 
-    expr ::= alternation
+    expr ::= group
+
+    # metacharacters
+    metacharacter ~ '^' | '$' | '|'
 
     # literals
     literal ::= ( ["] ) <string without double quotes> ( ["] )
@@ -48,7 +51,14 @@ lexeme default = action => [ name, value ] latm => 1
 
     # alternation
     alternation ::= atom+ separator => [|]
-    atom ::= literal | <character class>
+    atom ::= literal | <character class> | metacharacter
+
+    # grouping
+    group ::=
+            alternation
+        | '(' group ')'
+        | '(' group ')' alternation
+        | alternation '(' group ')'
 
 :discard ~ whitespace
     whitespace ~ [ ]+
@@ -92,7 +102,24 @@ my $tests = [
     [ q{ 'c' | 'ca' | 'cat' | "cats" }, "cats", 1, [ 1 ], 'alternation, match character class at the first string position' ],
     [ q{ "cats" | 'cat' | 'ca' | 'c' }, "cats", 1, [ 1 ], 'alternation, match character class at the first string position' ],
     [ q{ [cat]{3} | [dog]+ | [^bird]* }, "cats and dogs", 1, [ 1 ], 'alternation, match character classes' ],
+    # grouping
+    [ q{ ( 'a' | 'b')  }, "ab", 1, [ 'a' ], 'grouping' ],
+    [ q{ ( 'a' | 'b' ) 'b' }, "bb", 1, [ 'b' ], 'grouping' ],
+    [ q{ 'house' ( 'cat' | ) }, [ 'housecat', 'house' ], [ 1, 1 ], [ 'cat', '' ], 'grouping, empty alternative' ],
 ];
+
+=pod grouping
+
+    (ac|b)b   # matches 'acb' or 'bb'
+    (^a|b)c   # matches 'ac' at start of string or 'bc' anywhere
+    (a|[bc])d # matches 'ad', 'bd', or 'cd'
+    house(cat|)  # matches either 'housecat' or 'house'
+    house(cat(s|)|)  # matches either 'housecats' or 'housecat' or
+                        # 'house'.  Note groups can be nested.
+    (19|20|)\d\d;  # match years 19xx, 20xx, or the Y2K problem, xx
+    "20" =~ /(19|20|)\d\d/;  # matches the null alternative '()\d\d',
+                             # because '20\d\d' can't match
+=cut
 
 my $slg = Marpa::R2::Scanless::G->new( { source  => \$dsl } );
 
@@ -122,6 +149,9 @@ TESTS:
 for my $test (@$tests){
 
     my ($source, $input, $expected_scalar, $expected_list, $desc) = @$test;
+    $input = [ $input ] unless ref $input eq "ARRAY";
+    $expected_scalar = [ $expected_scalar ] unless ref $expected_scalar eq "ARRAY";
+    $expected_list = [ $expected_list ] unless ref $expected_list eq "ARRAY";
     $source =~ s/^\s+|\s+$//g;
     my $must_parse   = $desc !~ /BNF parse error expected/;
     my $must_compile = $desc !~ /RE compile error expected/;
@@ -144,12 +174,16 @@ for my $test (@$tests){
         } );
         eval { $slr->read(\$source) } || warn "$@\nProgress report is:\n" . $slr->show_progress;
         is $slr->ambiguity_metric(), 1, "BNF parsed unambiguously";
+        while (my $value_ref = $slr->value()){
+            diag Dumper ${ $value_ref };
+        }
     }
 
     SKIP: {
 
         skip "BNF source parse error", 3 unless defined $ast and $must_parse;
 
+        warn Dumper $ast;
         my $re = translate( $ast );
         diag "RE: /$re/";
 
@@ -157,15 +191,22 @@ for my $test (@$tests){
         { no warnings; $re_compiles = eval { qr/$re/ } };
         ok !$@, "$desc: compile";
         SKIP: {
-            skip "RE doesn't compile", 2 unless $re_compiles and $must_compile;
+            skip "RE doesn't compile", @$input - 1 unless $re_compiles and $must_compile;
 
-            diag "input: $input";
+            for my $i (@$input - 1){
+                my $in = $input->[$i];
+                my $exp_list = $expected_list->[$i];
+                my $exp_scalar = $expected_scalar->[$i];
 
-            my $got = $input =~ /$re/x;
-            is $got, $expected_scalar, "$desc: scalar-context match";
+                diag "input: $in";
 
-            my @got = $input =~ /$re/x;
-            is_deeply \@got, $expected_list, "$desc: list-context match";
+                my $got = $in =~ /$re/x;
+                is $got, $exp_scalar, "$desc: scalar-context match";
+
+                my @got = $in =~ /$re/x;
+                is_deeply \@got, [ $exp_list ], "$desc: list-context match";
+
+            } ## for $input ...
         }
     }
 
