@@ -15,7 +15,7 @@ my $dsl = q{;
 :default ::= action => [ name, values ]
 lexeme default = action => [ name, value ] latm => 1
 
-    expr ::= group
+    statements ::= statement+
 
     # character escapes
     <character escape> ~ '\d'
@@ -49,8 +49,17 @@ lexeme default = action => [ name, value ] latm => 1
 
     <unsigned integer> ~ [\d]+ # todo: enforce no [+-]
     comma ~ ','
+    boolean ~ [01]
 
-    atom ::= literal | <character class>
+    symbol ::= <symbol name> # adapted from metag.bnf
+    <symbol name> ::= <bare name>
+    <symbol name> ::= <bracketed name>
+    <bare name> ~ [^0-9'"\[\]\\\*\+\{\}\?\(\)\|\s] <word chars> #'
+    <word chars> ~ [\w]*
+    <bracketed name> ~ '<' <bracketed name string> '>'
+    <bracketed name string> ~ [\s\w]+
+
+    atom ::= literal | <character class> | symbol
 
     # grouping and alternation
     group ::=
@@ -62,8 +71,30 @@ lexeme default = action => [ name, value ] latm => 1
         || '|' group
         || group '|' group
 
+    # statements
+    statement ::= <empty rule> | <alternative rule> | <quantified rule>
+
+    <empty rule> ::= lhs (<op declare bnf>)
+    <alternative rule> ::= lhs (<op declare bnf>) alternatives
+    <quantified rule> ::= lhs (<op declare bnf>) <single symbol> quantifier <adverb list>
+    <quantified rule> ::= lhs (<op declare bnf>) <single symbol> quantifier
+
+    alternatives ::= group
+
+    <adverb list> ::= <adverb list items>
+    <adverb list items> ::= <adverb item>*
+    <adverb item> ::= <separator specification> | <proper specification>
+
+    <separator specification> ::= ('separator' '=>') <single symbol>
+    <proper specification> ::= ('proper' '=>') boolean
+
+    lhs ::= <symbol name>
+    <single symbol> ::= symbol
+
+    <op declare bnf> ~ '::='
+
 :discard ~ whitespace
-    whitespace ~ [ ]+
+    whitespace ~ [\s]+
 
 };
 
@@ -71,63 +102,70 @@ lexeme default = action => [ name, value ] latm => 1
 # BNF source, input string, scalar-context match, list-context match, desc
 my $tests = [
     # mustn't parse
-    [ q{ [] }, 'hello world', 1, [ 1 ], 'empty character class, BNF parse error expected' ],
+    [ q{ s ::= [] }, 'hello world', 1, [ 1 ], 'empty character class, BNF parse error expected' ],
     # must parse, but regex must not compile
-    [ q{ [\x] }, 'hello world', 1, [ 1 ], 'empty character class, RE compile error expected' ],
+    [ q{ s ::= [\x] }, 'hello world', 1, [ 1 ], 'empty character class, RE compile error expected' ],
     # must parse
-    [ q{ 'hello' }, 'hello world', 1, [ 1 ], 'simple word matching' ],
-    [ q{ "hello" }, 'hello world', 1, [ 1 ], 'simple word matching' ],
-    [ q{ [a-z] }, 'hello world', 1, [ 1 ], 'unquantified character class' ],
-    [ q{ [a-z] * }, 'hello world', 1, [ 1 ], '0 or more character class' ],
-    [ q{ [a-z] * + }, 'hello world', 1, [ 1 ], 'possessive 0 or more character class' ],
-    [ q{ [a-z]+ }, 'hello world', 1, [ 1 ], '1 or more character class' ],
-    [ q{ [a-z]++ }, 'hello world', 1, [ 1 ], 'possessive 1 or more character class' ],
-    [ q{ [a-z]? }, 'hello world', 1, [ 1 ], '0 or 1 character class' ],
-    [ q{ [a-z] * ? }, 'hello world', 1, [ 1 ], 'non-greedy 0 or more character class' ],
-    [ q{ [a-z] + ? }, 'hello world', 1, [ 1 ], 'non-greedy 1 or more character class' ],
-    [ q{ [a-z]*? }, 'hello world', 1, [ 1 ], 'non-greedy 0 or more character class' ],
-    [ q{ [a-z]+? }, 'hello world', 1, [ 1 ], 'non-greedy 1 or more character class' ],
-    [ q{ [a-z]?? }, 'hello world', 1, [ 1 ], 'non-greedy 0 or 1 character class' ],
-    [ q{ [a-z]{2} }, 'hello world', 1, [ 1 ], 'exactly 2 character class' ],
-    [ q{ [a-z]{2,} }, 'hello world', 1, [ 1 ], '2 or more character class' ],
-    [ q{ [a-z]{2,3} }, 'hello world', 1, [ 1 ], '2 or 3 character class' ],
-    [ q{ [a-z]{2}? }, 'hello world', 1, [ 1 ], 'non-greedy 2 or more character class' ],
-    [ q{ [a-z]{2,}? }, 'hello world', 1, [ 1 ], 'non-greedy 2 or more character class' ],
-    [ q{ [a-z] { 2 , 3 } ? }, 'hello world', 1, [ 1 ], 'non-greedy 2 or 3 character class' ],
-    [ q{ [a-z]{2}+ }, 'hello world', 1, [ 1 ], 'non-backtracking (possessive) exactly 2 character class' ],
-    [ q{ [a-z]{2,}+ }, 'hello world', 1, [ 1 ], 'non-backtracking 2 or more character class' ],
-    [ q{ [^a-z] { 2 , 3 } + }, 'hello world', '', [], 'non-backtracking 2 or 3 character class' ],
-    [ q{ 'lit[a-z]ral' }, 'literal', 1, [ 1 ], 'embedded in literal character class' ],
+    [ q{ s ::= 'hello' }, 'hello world', 1, [ 1 ], 'simple word matching' ],
+    [ q{ s ::= "hello" }, 'hello world', 1, [ 1 ], 'simple word matching' ],
+    [ q{ s ::= [a-z] }, 'hello world', 1, [ 1 ], 'unquantified character class' ],
+    [ q{ s ::= [a-z] * }, 'hello world', 1, [ 1 ], '0 or more character class' ],
+    [ q{ s ::= [a-z] * + }, 'hello world', 1, [ 1 ], 'possessive 0 or more character class' ],
+    [ q{ s ::= [a-z]+ }, 'hello world', 1, [ 1 ], '1 or more character class' ],
+    [ q{ s ::= [a-z]++ }, 'hello world', 1, [ 1 ], 'possessive 1 or more character class' ],
+    [ q{ s ::= [a-z]? }, 'hello world', 1, [ 1 ], '0 or 1 character class' ],
+    [ q{ s ::= [a-z] * ? }, 'hello world', 1, [ 1 ], 'non-greedy 0 or more character class' ],
+    [ q{ s ::= [a-z] + ? }, 'hello world', 1, [ 1 ], 'non-greedy 1 or more character class' ],
+    [ q{ s ::= [a-z]*? }, 'hello world', 1, [ 1 ], 'non-greedy 0 or more character class' ],
+    [ q{ s ::= [a-z]+? }, 'hello world', 1, [ 1 ], 'non-greedy 1 or more character class' ],
+    [ q{ s ::= [a-z]?? }, 'hello world', 1, [ 1 ], 'non-greedy 0 or 1 character class' ],
+    [ q{ s ::= [a-z]{2} }, 'hello world', 1, [ 1 ], 'exactly 2 character class' ],
+    [ q{ s ::= [a-z]{2,} }, 'hello world', 1, [ 1 ], '2 or more character class' ],
+    [ q{ s ::= [a-z]{2,3} }, 'hello world', 1, [ 1 ], '2 or 3 character class' ],
+    [ q{ s ::= [a-z]{2}? }, 'hello world', 1, [ 1 ], 'non-greedy 2 or more character class' ],
+    [ q{ s ::= [a-z]{2,}? }, 'hello world', 1, [ 1 ], 'non-greedy 2 or more character class' ],
+    [ q{ s ::= [a-z] { 2 , 3 } ? }, 'hello world', 1, [ 1 ], 'non-greedy 2 or 3 character class' ],
+    [ q{ s ::= [a-z]{2}+ }, 'hello world', 1, [ 1 ], 'non-backtracking (possessive) exactly 2 character class' ],
+    [ q{ s ::= [a-z]{2,}+ }, 'hello world', 1, [ 1 ], 'non-backtracking 2 or more character class' ],
+    [ q{ s ::= [^a-z] { 2 , 3 } + }, 'hello world', '', [], 'non-backtracking 2 or 3 character class' ],
+    [ q{ s ::= 'lit[a-z]ral' }, 'literal', 1, [ 1 ], 'embedded in literal character class' ],
     # alternation
-    [ q{ 'cat' | 'dog' | 'bird' }, "cats and dogs", 1, [ 1 ], 'alternation: match literal the first alternative' ],
-    [ q{ 'dog' | "cat" | 'bird' }, "cats and dogs", 1, [ 1 ], 'alternation: match literal earlier in the string' ],
-    [ q{ 'c' | 'ca' | 'cat' | "cats" }, "cats", 1, [ 1 ], 'alternation, match character class at the first string position' ],
-    [ q{ "cats" | 'cat' | 'ca' | 'c' }, "cats", 1, [ 1 ], 'alternation, match character class at the first string position' ],
-    [ q{ [cat]{3} | [dog]+ | [^bird]* }, "cats and dogs", 1, [ 1 ], 'alternation, match character classes' ],
+    [ q{ s ::= 'cat' | 'dog' | 'bird' }, "cats and dogs", 1, [ 1 ], 'alternation: match literal the first alternative' ],
+    [ q{ s ::= 'dog' | "cat" | 'bird' }, "cats and dogs", 1, [ 1 ], 'alternation: match literal earlier in the string' ],
+    [ q{ s ::= 'c' | 'ca' | 'cat' | "cats" }, "cats", 1, [ 1 ], 'alternation, match character class at the first string position' ],
+    [ q{ s ::= "cats" | 'cat' | 'ca' | 'c' }, "cats", 1, [ 1 ], 'alternation, match character class at the first string position' ],
+    [ q{ s ::= [cat]{3} | [dog]+ | [^bird]* }, "cats and dogs", 1, [ 1 ], 'alternation, match character classes' ],
     # grouping
-    [ q{ ( 'a' | 'b')  }, "ab", 1, [ 'a' ], 'grouping' ],
-    [ q{ ( 'a' | 'b' ) 'b' }, "bb", 1, [ 'b' ], 'grouping' ],
-    [ q{ [b] ( 'a' | 'b' ) }, "bb", 1, [ 'b' ], 'grouping' ],
-    [ q{ ( 'ac' | 'b' ) 'b' }, [ 'acb', "bb" ], [ 1, 1 ], [ 'ac', 'b' ], 'grouping' ],
+    [ q{ s ::= ( 'a' | 'b')  }, "ab", 1, [ 'a' ], 'grouping' ],
+    [ q{ s ::= ( 'a' | 'b' ) 'b' }, "bb", 1, [ 'b' ], 'grouping' ],
+    [ q{ s ::= [b] ( 'a' | 'b' ) }, "bb", 1, [ 'b' ], 'grouping' ],
+    [ q{ s ::= ( 'ac' | 'b' ) 'b' }, [ 'acb', "bb" ], [ 1, 1 ], [ 'ac', 'b' ], 'grouping' ],
     # matches 'ac' at start of string or 'bc' anywhere
     # todo: test error, e.g. unbalanced parens: ( ('^a'|'b')'c'
-    [ q{ ('^a'|'b')'c' }, [ 'ac', "bc" ], [ 1, 1 ], [ 'a', 'b' ], 'grouping' ],
+    [ q{ s ::= ('^a'|'b')'c' }, [ 'ac', "bc" ], [ 1, 1 ], [ 'a', 'b' ], 'grouping' ],
     # matches 'ad', 'bd', or 'cd'
-    [ q{ ('a'|[bc])'d' }, [ 'ad', 'bd', 'cd' ], [ 1, 1, 1 ], [ 'a', 'b', 'c' ], 'grouping with character class' ],
+    [ q{ s ::= ('a'|[bc])'d' }, [ 'ad', 'bd', 'cd' ], [ 1, 1, 1 ], [ 'a', 'b', 'c' ], 'grouping with character class' ],
 
-    [ q{ 'house' ( 'cat' | ) }, [ 'housecat', 'house' ], [ 1, 1 ], [ 'cat', '' ], 'grouping, empty alternative' ],
-    [ q{ 'house' ( 'cat' ( 's' |)|) },
+    [ q{ s ::= 'house' ( 'cat' | ) }, [ 'housecat', 'house' ], [ 1, 1 ], [ 'cat', '' ], 'grouping, empty alternative' ],
+    [ q{ s ::= 'house' ( 'cat' ( 's' |)|) },
         [ 'housecats',      'housecat',    'house' ],
         [ 1,                1,             1 ],
         [ [ 'cats', 's' ],  [ 'cat', '' ], [ '', undef ] ],
         'grouping, nested' ],
      # match years 19xx, 20xx, or the Y2K problem, xx
-    [ q{ ('19'|'20'|)\d\d },
+    [ q{ s ::= ( '19' | '20' | ) \d \d },
         [ '1901', '2001', '20' ],
         [ 1,      1,      1 ],
         [ '19', '20', '' ],
         'grouping, years' ],
-
+    # symbols
+    [ q{ s ::= ( nineteen | twenty | ) \d\d
+         nineteen ::= '19'
+         twenty   ::= '20' },
+        [ '1901', '2001', '20' ],
+        [ 1,      1,      1 ],
+        [ '19', '20', '' ],
+        'grouping, years' ],
 ];
 
 =pod grouping
@@ -145,11 +183,16 @@ sub translate{
     my $indent = "  " x ($depth - 1);
     if (ref $ast){
         my ($node_id, @children) = @$ast;
-        if (0){
-#        if ($node_id eq 'alternation'){
-#            warn Dumper $node_id, \@children;
-#            $s .= join '|', map { translate( $_ ) } @children
+        if ($node_id eq 'statement'){
+            warn Dumper $node_id, \@children;
+            my $lhs = $children[0]->[1]->[1]->[1]->[1];
+            warn "lhs: ", Dumper $lhs;
+            warn "alternatives: ", Dumper $children[0]->[2];
+            $s .= "(?#$lhs)" . '(?:' . join('', map { translate( $_ ) } $children[0]->[2] ) . ')';
         }
+#        elseif ($node_id eq 'alternatives'){
+#
+#        }
         else{
             $s .= join '', map { translate( $_ ) } @children;
         }
@@ -211,7 +254,7 @@ for my $test (@$tests){
         diag "RE: /$re/";
 
         my $re_compiles;
-        { no warnings; $re_compiles = eval { qr/$re/ } };
+        { no warnings; $re_compiles = eval { qr/$re/x } };
         ok !$@, "$desc: compile";
         SKIP: {
             skip "RE doesn't compile", @$input - 1 unless $re_compiles and $must_compile;
