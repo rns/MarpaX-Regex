@@ -13,7 +13,7 @@ use cases
     # how to express this thing in the transducer language?
     # another operation needed
     intermediate symbols, which reduce to literals or charclasses
-    <op hierarchical substitution> ::= <terminals to be substituted>
+    <op hierarchical substitution/concatenation> ::= <terminals to be substituted>
       source:
         code    ~ 'C' int
         int     ~ [\d]+
