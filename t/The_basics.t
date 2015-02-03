@@ -27,25 +27,24 @@ lexeme default = action => [ name, value ] latm => 1
     <string without single quotes> ~ [^\^\$\.']+ #'
 
     # character classes
-    <character class> ::= '[' <character class characters> ']' quantifier
     <character class> ::= '[' <character class characters> ']'
     <character class> ::= <character escape>
     <character class characters> ~ <character class character>+
     <character class character> ~ [^\]] | '\[' | '\]' | '[:' | ':]'
 
     quantifier ::=
-            '*'  | '+'  | '?'
-        |   '*' '?' | '+' '?' | '?' '?'
-        |   '*' '+' | '+' '+' | '?' '+'
+             '*'  | '+'  | '?'
+        |    '*?' | '+?' | '??'
+        |   '*+' | '++' | '?+'
         |   '{' <unsigned integer> '}'
         |   '{' <unsigned integer> comma '}'
         |   '{' <unsigned integer> comma <unsigned integer> '}'
-        |   '{' <unsigned integer> '}' '?'
-        |   '{' <unsigned integer> comma '}' '?'
-        |   '{' <unsigned integer> comma <unsigned integer> '}' '?'
-        |   '{' <unsigned integer> '}' '+'
-        |   '{' <unsigned integer> comma '}' '+'
-        |   '{' <unsigned integer> comma <unsigned integer> '}' '+'
+        |   '{' <unsigned integer> '}?'
+        |   '{' <unsigned integer> comma '}?'
+        |   '{' <unsigned integer> comma <unsigned integer> '}?'
+        |   '{' <unsigned integer> '}+'
+        |   '{' <unsigned integer> comma '}+'
+        |   '{' <unsigned integer> comma <unsigned integer> '}+'
 
     <unsigned integer> ~ [\d]+ # todo: enforce no [+-]
     comma ~ ','
@@ -59,7 +58,7 @@ lexeme default = action => [ name, value ] latm => 1
     <bracketed name> ~ '<' <bracketed name string> '>'
     <bracketed name string> ~ [\s\.\w]+
 
-    atom ::= literal | <character class> | symbol | metacharacter
+    atom ::= literal | <character class> | symbol | metacharacter | quantifier
     metacharacter ~ '^' | '$' | '.'
 
     # grouping and alternation
