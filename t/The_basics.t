@@ -58,41 +58,23 @@ lexeme default = action => [ name, value ] latm => 1
         |   '{' <unsigned integer> comma '}+'
         |   '{' <unsigned integer> comma <unsigned integer> '}+'
 
-    <unsigned integer> ~ [\d]+ # todo: enforce no [+-]
+    <unsigned integer> ~ [\d]+
     comma ~ ','
-#    boolean ~ [01]
 
     # grouping and alternation
     group ::=
             atom
         | '(' group ')' assoc => group
-#        || group atom
-#        || atom group
-#        || '|' group
-#        || group '|'
-#        || group '|' group
         || group group
 
     # statements
-    statement ::= <empty rule> | <alternative rule> #| <quantified rule>
+    statement ::= <empty rule> | <alternative rule>
 
     <empty rule> ::= lhs (<op declare bnf>)
     <alternative rule> ::= lhs (<op declare bnf>) alternatives
-#    <quantified rule> ::= lhs (<op declare bnf>) <single symbol> quantifier <adverb list>
-#    <quantified rule> ::= lhs (<op declare bnf>) <single symbol> quantifier
 
     alternatives ::= group
-
-#    <adverb list> ::= <adverb list items>
-#    <adverb list items> ::= <adverb item>*
-#    <adverb item> ::= <separator specification> | <proper specification>
-
-#    <separator specification> ::= ('separator' '=>') <single symbol>
-#    <proper specification> ::= ('proper' '=>') boolean
-
     lhs ::= <symbol name>
-#    <single symbol> ::= symbol
-
     <op declare bnf> ~ '::='
 
 :discard ~ whitespace
@@ -336,10 +318,13 @@ for my $test (@$tests){
         my $re_compiles;
         { no warnings; $re_compiles = eval { qr/$re/x } };
         ok !$@, "$desc: compile";
+
         SKIP: {
+
             skip "RE doesn't compile", @$input - 1 unless $re_compiles and $must_compile;
 
             for my $i (0 .. @$input - 1){
+
                 my $in = $input->[$i];
                 my $exp_list = $expected_list->[$i];
                 my $exp_scalar = $expected_scalar->[$i];
@@ -355,6 +340,7 @@ for my $test (@$tests){
                 # compare to single-item array if matched in list context
                 $exp_list = [ $exp_list ] unless ref $exp_list;
                 is_deeply \@got, $exp_list, "$desc: list-context match";
+
             } ## for $input ...
         }
     }
