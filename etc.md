@@ -4,12 +4,13 @@
 http://blogs.perl.org/users/jean-damien_durand/2014/02/a-marpa-use-case-javascript-regexp-implementation.html
 
 use cases
+  Building regexp as a rewriting system
     BNF 
       msvc_warnings.t
       Marpa::R2 synopsis
     RE  
       json parser by Randal
-      angle brackets -- Heckendorn
+      angle brackets
       gruber url regexp
       Regexp::Common
       Regexp::Grammars
