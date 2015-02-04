@@ -14,17 +14,9 @@ use cases
       Regexp::Common
       Regexp::Grammars
       Parse::RecDescent
+    recursion
     composability
       include + namespaces
-    # how to express this thing in the transducer language?
-    # another operation needed
-    intermediate symbols, which reduce to literals or charclasses
-    <op hierarchical substitution/concatenation> ::= <terminals to be substituted>
-      source:
-        code    ~ 'C' int
-        int     ~ [\d]+
-      target:      
-        code    ~ 'C' [\d]+
     
 RE features: Support or not
 ---------------------------
