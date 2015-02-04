@@ -220,23 +220,125 @@ my $slg = Marpa::R2::Scanless::G->new( { source  => \$dsl } );
 
 =head2 translate pseudocode
 
+    until there is no symbols to replace
+        find terminals (rules without symbols)
+        replace all occurrences terminal symbols in non-terminals with the contents of terminals
+    if there are symbols, but there is no terminals to replace them, warn
+    concatenate ast
+
     terminal rules      -- RHS has no symbols
     non-terminals rules -- RHS has at least one symbol
         -- enforce those rules in the grammar?
 
-    uniqify node IDs
-        $rule_id = qq{$lhs[$rhs_alternative_index]}
-    extract terminal rules ((has no symbols on its rhs)) to substitution table
-        add it to the substitution table as
-        lhs => join '|', @alternatives
-        if lhs already exists in the substitution table,
-        append the rule rhs to its value with '|'
-    remove terminal rules from the tree
-    substitute node IDs with terminal rule contents
-        if there are unsubstituted symbols, warn about them
-    stringify
-        qq{(?#$rule_id)(?:$substituted_contents)}
-        properly indented
+=cut
+
+sub ast_find{
+    my ($ast, $code ) = @_;
+    my $found = [];
+    sub find{
+        my ($node, $code, $found) = @_;
+        if (ref $node){
+            my ($node_id, @children) = @$node;
+            if ( $code->($node) ){
+                local $Data::Dumper::Indent = 0;
+                push @$found, $node;
+            }
+            find ($_, $code, $found) for @children;
+        }
+    }
+    find($ast, $code, $found);
+    return $found;
+}
+
+sub terminals{
+    my ($ast) = @_;
+    return ast_find(
+        $ast,
+        sub {
+            my ($node_id, @children) = @{ $_[0] };
+            if ($node_id eq 'statement'){
+                for my $child (@children){
+                    my $symbols = ast_find($child, sub { $_[0]->[0] eq 'symbol' } );
+                    return 0 if @$symbols;
+                }
+                return 1;
+            }
+        }
+    );
+}
+sub primaries{
+    my ($ast) = @_;
+
+    local $Data::Dumper::Indent = 0;
+
+    return ast_find( $ast, sub {
+        my ($node_id, @children) = @{ $_[0] };
+        return 0 unless $node_id eq 'group';
+#        return 0 unless ref $children[0] eq "ARRAY";
+#        return 0 unless ref $children[0]->[1] eq "ARRAY";
+#        warn "# group \$children[0]:\n", Dumper $children[0];
+#        return 1 if $children[0]->[1] eq 'primary';
+        return 0 unless ref $_[0]->[1] eq "ARRAY";
+        return 1 if $_[0]->[1]->[0] eq 'primary';
+        return 0;
+    } );
+}
+
+sub substitute {
+    my ($ast) = @_;
+
+    local $Data::Dumper::Indent = 0;
+
+    my $terminals = terminals($ast);
+    my $substitutes = {};
+    for my $t (@$terminals){
+#        warn "# terminal:\n", Dumper($t);
+        my ($node_id, @children) = @$t;
+        my $lhs = $children[0]->[1]->[1]->[1]->[1];
+        # get terminal's alternatives group
+        my $group = $children[0]->[2]->[1];
+        push @{ $substitutes->{$lhs} }, [ $t, $group ];
+    }
+#    warn "# substitutes:\n", Dumper $substitutes;
+
+    my $primaries = primaries($ast);
+    for my $p (@$primaries){
+#        warn "# p:\n", Dumper($p);
+        next unless $p->[1]->[1]->[0] eq "symbol";
+#        warn Dumper $p->[1]->[1]->[1]->[1]->[1];
+
+        my $symbol_name = $p->[1]->[1]->[1]->[1]->[1];
+        next unless exists $substitutes->{$symbol_name};
+        warn "\n# substitute $symbol_name group\n", Dumper($p), "\nwith:\n  ";
+        # non-terminal's name must become terminal's name
+        # new terminal: $symbol_name =>
+        # there can be several groups under the same terminal lhs, their contents
+        # must be concatenated to form group/primary contents
+        for my $subst (@{ $substitutes->{$symbol_name} } ){
+            my ($statement, $group) = @$subst;
+            warn "this group:\n  ", Dumper $group;
+            warn "and set up new terminal statement for the next cycle:\n  ",
+                Dumper $statement,
+                "if there are references to it from other rules (unlike <optional sign>, which should be deleted)";
+            @$p = @$group;
+        }
+        # terminal's contents must become non-terminal's contents
+        # new group:
+    }
+    local $Data::Dumper::Indent = 1;
+    warn "after substitute:", Dumper $ast;
+}
+
+=pod
+
+source ast
+
+# RE: /(?#number)(?:^<optional sign>(<f.p. mantissa>|integer)<optional exponent>$)(?#<optional sign>)(?:[+-]?)(?#<f.p. mantissa>)(?:integer.integer|integer.)(?#<f.p. mantissa>)(?:.integer)(?#integer)(?:integer)(?#<optional exponent>)(?:([eE][+-]?integer)?)(?#integer)(?:digit+)(?#digit)(?:\d)/
+
+ast with <optional sign> and digit substituted
+but their statements not removed
+
+# RE: /(?#number)(?:^[+-]?(<f.p. mantissa>|integer)<optional exponent>$)(?#<optional sign>)(?:[+-]?)(?#<f.p. mantissa>)(?:integer.integer|integer.)(?#<f.p. mantissa>)(?:.integer)(?#integer)(?:integer)(?#<optional exponent>)(?:([eE][+-]?integer)?)(?#integer)(?:\d+)(?#digit)(?:\d)/
 
 =cut
 
@@ -251,12 +353,9 @@ sub translate{
 #            warn Dumper $node_id, \@children;
             my $lhs = $children[0]->[1]->[1]->[1]->[1];
 #            warn "lhs: ", Dumper $lhs;
-#            warn "alternatives: ", Dumper $children[0]->[2];
-            $s .= "(?#$lhs)" . '(?:' . join('', map { translate( $_ ) } $children[0]->[2] ) . ')';
+#            warn "# $lhs alternatives:\n", Dumper $children[0]->[2]->[1];
+            $s .= "(?#$lhs)" . "(?:" . join('', map { translate( $_ ) } $children[0]->[2] ) . ")";
         }
-#        elseif ($node_id eq 'alternatives'){
-#
-#        }
         else{
             $s .= join '', map { translate( $_ ) } @children;
         }
@@ -312,7 +411,7 @@ for my $test (@$tests){
 
         skip "BNF source parse error", 3 unless defined $ast and $must_parse;
 
-#        warn Dumper $ast;
+        substitute($ast);
         my $re = translate( $ast );
         diag "RE: /$re/";
 
