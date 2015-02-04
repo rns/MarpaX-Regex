@@ -31,8 +31,7 @@ lexeme default = action => [ name, value ] latm => 1
     symbol ::= <symbol name> # adapted from metag.bnf
     <symbol name> ::= <bare name>
     <symbol name> ::= <bracketed name>
-    <bare name> ~ [^0-9'"\[\]\\\*\+\{\}\?\(\)\|\^\$\.\s] <word chars> #'
-    <word chars> ~ [\w]*
+    <bare name> ~ [\w]*
     <bracketed name> ~ '<' <bracketed name string> '>'
     <bracketed name string> ~ [\s\.\w]+
 
@@ -205,11 +204,12 @@ my $tests = [
                                | integer '.'          # mantissa of the form a.
          <f.p. mantissa>     ::= '.' integer          # mantissa of the form .b
          integer             ::= integer              # integer of the form a
-         <optional exponent> ::= ([eE][+-]?integer)?
+         <optional exponent> ::= ( [eE][+-]? integer )?
          integer             ::= digit+
          digit               ::= \d
         }, '1.3', 1, '1.3', 'building a regexp, fully integer-factored form' ],
-    # todo: possible feature: infer a more compact form below from the ast
+    # possible todo: feature: infer a more compact form below from the ast
+    # possible todo: feature: assemble empty rules to form ()? groups
     #    /^[+-]?\ *(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/;
 ];
 
