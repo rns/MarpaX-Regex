@@ -1,8 +1,19 @@
 ﻿MarpaX-Regex
 ============
 
-http://blogs.perl.org/users/jean-damien_durand/2014/02/a-marpa-use-case-javascript-regexp-implementation.html
+improve build- and read-ability
+move to Marpa::R2 for long strings and hard regexes
 
+priorities
+----------
+  substitution
+
+  escaped metacharacters in literals
+    like <character class character>
+
+  coerce symbol names to REs
+    Currently NAME is restricted to simple identifiers only.  In other words, it must match "/^[_A-Za-z][_A-Za-z0-9]*\z/" or its Unicode extension (see utf8), though it is not extended by the locale (see perllocale).
+  
 use cases
   Building regexp as a rewriting system
     BNF 
@@ -18,9 +29,12 @@ use cases
     recursion
     composability
       include + namespaces
+  RE Converter -- give a regex, have it presented in a nice syntax and start working with it
+      - MarpaX::Languages::Regexp::AST
+  Grammar inference with Sequitur
     
-RE features: Support or not
----------------------------
+RE Features (Support or not)
+----------------------------
 
 http://perldoc.perl.org/perlretut.html
 
@@ -84,10 +98,6 @@ Implementation Details
 - 5.010 regular expressions
 - return regexp as a string
 - return regexp compiled with /x
-
-- symbols names /^[_A-Za-z][_A-Za-z0-9]*\z/ or 'use utf8;', no locale extensions, per perlre:
-
-    Currently NAME is restricted to simple identifiers only.  In other words, it must match "/^[_A-Za-z][_A-Za-z0-9]*\z/" or its Unicode extension (see utf8), though it is not extended by the locale (see perllocale).
 
 BNF Primer
 ----------
@@ -168,29 +178,6 @@ RE escapes and their names
     \G  only at pos() (e.g. at the end-of-match position
         of prior m//g)
 
-    - use cases
-    
-        - showcase -- to be refined -- https://gist.github.com/rns/8625302
-        - balanced text
-            quote instring quote -- sl_json.t
-            '[' instring ']'
-        - Famous regexes
-            Randal Schwartz JSON regex
-            XML regex
-            ...
-            other examples with named rules, captures and assertions
-        
-    - converter -- give a regex, have it presented in a nice syntax and start working with it
-        - MarpaX::Languages::Regexp::AST
-    - grammar inference with Sequitur
-        rules' and symbols' names
-            R_name_me1...
-            LHS_name_me2...
-            S_name_me2...
-                same names in same contexts to facilitate find/replace
-        - hosted service
-            - input your text and/or regex, get a skeleton grammar
-    
 Regexp::Common
 --------------
     

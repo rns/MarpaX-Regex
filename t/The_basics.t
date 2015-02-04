@@ -17,21 +17,40 @@ lexeme default = action => [ name, value ] latm => 1
 
     statements ::= statement+
 
-    # literals
-    literal ::= ( ["] ) <string without double quotes> ( ["] )
-    literal ::= ( ['] ) <string without single quotes> ( ['] )
-    <string without double quotes> ~ [^\^\$"]+ #"
-    <string without single quotes> ~ [^\^\$']+ #'
+    # bottom to top order
+    metacharacter ~ '^' | '$' | '.' | [\\\\] | '|'
+    <character escape>  ~ '\d' | '\w'
 
-    # character classes
+    quantifier ::=
+          '*'  | '+'  | '?'
+        # '*' '?' leads to ambiguous parse
+        | '*?' | '+?' | '??'
+        | '*+' | '++' | '?+'
+        | '{' integer '}'
+        | '{' integer comma '}'
+        | '{' integer comma integer '}'
+        | '{' integer '}?'
+        | '{' integer comma '}?'
+        | '{' integer comma integer '}?'
+        | '{' integer '}+'
+        | '{' integer comma '}+'
+        | '{' integer comma integer '}+'
+    integer ~ [\d]+
+    comma   ~ ','
+
+    literal ::= ( ["] ) <string without double quotes and metacharacters> ( ["] )
+    literal ::= ( ['] ) <string without single quotes and metacharacters> ( ['] )
+    <string without double quotes and metacharacters> ~ [^\^\$"]+ #"
+    <string without single quotes and metacharacters> ~ [^\^\$']+ #'
+
     <character class> ::= '[' <character class characters> ']'
     <character class characters> ~ <character class character>+
     <character class character> ~ [^\]] | '\[' | '\]' | '[:' | ':]'
 
-    symbol ::= <symbol name> # adapted from metag.bnf
+    symbol ::= <symbol name>
     <symbol name> ::= <bare name>
     <symbol name> ::= <bracketed name>
-    <bare name> ~ [\w]*
+    <bare name> ~ [\w]+
     <bracketed name> ~ '<' <bracketed name string> '>'
     <bracketed name string> ~ [\s\.\w]+
 
@@ -42,26 +61,8 @@ lexeme default = action => [ name, value ] latm => 1
         | metacharacter
         | quantifier
 
-    metacharacter ~ '^' | '$' | '.' | [\\\\] | '|'
-    <character escape> ~ '\d' | '\w'
-    quantifier ::=
-          '*'  | '+'  | '?'
-        | '*?' | '+?' | '??'
-        | '*+' | '++' | '?+'
-        | '{' <unsigned integer> '}'
-        | '{' <unsigned integer> comma '}'
-        | '{' <unsigned integer> comma <unsigned integer> '}'
-        | '{' <unsigned integer> '}?'
-        | '{' <unsigned integer> comma '}?'
-        | '{' <unsigned integer> comma <unsigned integer> '}?'
-        | '{' <unsigned integer> '}+'
-        | '{' <unsigned integer> comma '}+'
-        | '{' <unsigned integer> comma <unsigned integer> '}+'
-
-    <unsigned integer> ~ [\d]+
-    comma ~ ','
-
     # grouping and alternation
+    # must group group be group '|' group, but this doesn't allow empty groups
     group ::=
             primary
         | '(' group ')' assoc => group
