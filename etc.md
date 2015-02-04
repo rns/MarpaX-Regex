@@ -6,10 +6,16 @@ http://blogs.perl.org/users/jean-damien_durand/2014/02/a-marpa-use-case-javascri
 use cases
     BNF 
       msvc_warnings.t
-      Marpa::R2 synopsis $R
+      Marpa::R2 synopsis
     RE  
       json parser by Randal
-      angle brackets -- Heckeldorn
+      angle brackets -- Heckendorn
+      gruber url regexp
+      Regexp::Common
+      Regexp::Grammars
+      Parse::RecDescent
+    composability
+      include + namespaces
     # how to express this thing in the transducer language?
     # another operation needed
     intermediate symbols, which reduce to literals or charclasses
@@ -20,36 +26,11 @@ use cases
       target:      
         code    ~ 'C' [\d]+
     
-design
-  RE features
-    literals
-    character classes
-    metacharacters
-    quantifiers
-      ? + *
-      {n,m}
-    parens --
-      nesting
-      grouping
-      matching
-      capturing/non-capturing
-        (...) define capture groups, not hiding
-          (sym1 sym2) -> () # unnamed
-          (file) -> (file:) # named
-    backreferences
-      relative
-      named
-    recursion
-  BNF = controlled SLIF, i.e. SLIF except
-    whitespaces are discarded
-    double quotes are supported
-    all symbols must translate to literals or charclasses
-    priority rules as order of matching in |
-    ~ charclasses
-  
+RE features: Support or not
+---------------------------
 
-RE features: support or not support
 http://perldoc.perl.org/perlretut.html
+
 Part 1: The basics
   Simple word matching
   Using character classes
@@ -67,6 +48,13 @@ Part 1: The basics
   Matching repetitions
   Possessive quantifiers
   Building a regexp
+  -----------------
+    specifying the task in detail,
+    breaking down the problem into smaller parts,
+    translating the small parts into regexps,
+    combining the regexps,
+    and optimizing the final combined regexp.
+
   Using regular expressions in Perl
   
 Part 2: Power tools
@@ -83,349 +71,110 @@ Part 2: Power tools
   Backtracking control verbs
   Pragmas and debugging
 
-Buzzwords
----------
-
-- Practical general BNF parsing meets Perl regular expressions.
-- Regexp::Grammars and Parse::RecDescent without the line noise
-- Regexp::Grammars done with BNF
-- BNF symbols and rules from expressions of literals and character classes
-- structure throught -- in input, grammar, and output
-    - find structure in input
-    - describe structure in BNF
-    - get structured results from output
-
 Synopsis
 --------
     
     use 5.010;
-    
+    use MarpaX::Regex;
     my $re = MarpaX::Regex->new(<<GRAMMAR);
     ...
     GRAMMAR
-    
+    my $s = $re->as_string;
     my $input = 'what needs to be matched';
-    
-    $input =~ m/$re/x;
-    
+    $input =~ m/$re/x; # extended syntax is required
     # $1 etc. captures work as expected
     $input =~ s/$re/substitution/x;
         
 Implementation Details
 ----------------------
 
-- MarpaX-Regex-Compiler?
-
 - 5.010 regular expressions
-- return string, not regex
-- require extended syntax
-
-- catch undefined symbols -- warning: symbol <symbol> undefined, assuming ''
-
-- grammar source needs to be a proper string, not mere implementation of string interface (no tied vars or handles)
+- return regexp as a string
+- return regexp compiled with /x
 
 - symbols names /^[_A-Za-z][_A-Za-z0-9]*\z/ or 'use utf8;', no locale extensions, per perlre:
 
-    Currently NAME is restricted to simple identifiers only.  In other words, it must match "/^[_A-Za-z][_A-Za-z0-9]*\z/" or its Unicode extension (see utf8), though it isn't extended by the locale (see perllocale).
-
-- capturing groups
-    - named (Perl) or numbered is named aren't supported (e.g. JS)
-
-?- m//, s///, =~ operator overloading and %/ a-la Regexp::Grammars
-?- AST -- hierarchy of results via %/ hash or otherwise?
-    - %+, %-, @+, @- store spans and matches of captre groups
+    Currently NAME is restricted to simple identifiers only.  In other words, it must match "/^[_A-Za-z][_A-Za-z0-9]*\z/" or its Unicode extension (see utf8), though it is not extended by the locale (see perllocale).
 
 BNF Primer
 ----------
 
 BNF -- a rewriting system
--- Jeffrey Kegler om [Marpa IRC Channel](http://irclog.perlgeek.de/marpa/2014-01-15#i_8120641}
+-- Jeffrey Kegler on 
+[Marpa IRC Channel](http://irclog.perlgeek.de/marpa/2014-01-15#i_8120641}
 
 a stone is a stein is a rock is a boulder is a pebble
 -- Ernest Hemingway, For Whom the Bell Tolls
 
-../cpan/lib/dev/file.c(11824) : warning C4820: '__unnamed' : '3' bytes padding added after member 'c'
-../cpan/lib/dev/file.c(12464) : warning C4100: 'param' : unreferenced formal parameter
-file.c(12538) : warning C4127: conditional expression is constant
+RE escapes and their names
+--------------------------
 
-    warning ::= file ('(') line (')') (':' 'warning') code (':') message
+    escape      reserved bareword
+    ------      -----------------
+    \w+         word
+    \d+         digits
 
+    \w          word-char
+    \W          non-word-char
 
-Syntax
-------
-    
-    SLIF
-        - L0
-        - precedence
-        - adverb lists, except sequence rules (separator and proper)
-        + double quited strings
-        + unused symbols warning
-        + undefined symbols warning
-        TODO: extend character classes
-        
-    * BNF: a rewriting system with an alphabet of terminals, and rules which are composed of symbols, the first rule is the start rule
-        
-    * symbols -- barewords
-        
-        lhs ::= rhs1 rhs2 
-        
-    + | alternation 
+    \d          digit
+    \D          non-digit
 
-* compiler options
-    parens => capturing | hiding 
-        named groups are always capturing
-        only unnamed groups can be non-capturing
-        how faster are non-capturing groups? -- hardly much and input-dependant
-    ?target
-        post-5.010 lexical rules via (?(DEFINE)...) -- always capturing
-        pre-5.010 lexical rules via replacement
-    
-    
-lexing
+     \s        [3]  whitespace
+     \S        [3]  non-whitespace
+     \d        [3]  decimal digit
+     \D        [3]  non-digit
+     \pP       [3]  property{P}, property{Prop} for longer names
+     \PP       [3]  Match non-P
+     \X        [4]  Match Unicode "eXtended grapheme cluster"
+     \C             Match a single C-language char (octet) even if that is
+                      part of a larger UTF-8 character.  Thus it breaks up
+                      characters into their UTF-8 bytes, so you may end up
+                      with malformed pieces of UTF-8.  Unsupported in
+                      lookbehind.
+     \1        [5]  Backreference to a specific capture group or buffer.
+                      '1' may actually be any positive integer.
+     \g1       [5]  Backreference to a specific or previous group,
+     \g{-1}    [5]  The number may be negative indicating a relative
+                      previous group and may optionally be wrapped in
+                      curly brackets for safer parsing.
+     \g{name}  [5]  Named backreference
+     \k<name>  [5]  Named backreference
+     \K        [6]  Keep the stuff left of the \K, don't include it in $&
+     \N        [7]  Any character but \n.  Not affected by /s modifier
+     \v        [3]  Vertical whitespace
+     \V        [3]  Not vertical whitespace
+     \h        [3]  Horizontal whitespace
+     \H        [3]  Not horizontal whitespace
+     \R        [4]  Linebreak
 
-    + literals, charclasses, line start, line end SOL EOL
+    \t          tab                   (HT, TAB)
+    \n          newline               (LF, NL)
+    \r          return                (CR)
+    \f          formfeed             (FF)
+    \a          alarm (bell)          (BEL)
+    \e          escape (think troff)  (ESC)
+    \cK         control char          (example: VT)
+    \x{}, \x00  character whose ordinal is the given hexadecimal number
+    \N{name}    named Unicode character or character sequence
+    \N{U+263D}  Unicode character     (example: FIRST QUARTER MOON)
+    \o{}, \000  character whose ordinal is the given octal number
+    \l          lowercase next char (think vi)
+    \u          uppercase next char (think vi)
+    \L          lowercase till \E (think vi)
+    \U          uppercase till \E (think vi)
+    \Q          quote (disable) pattern metacharacters till \E
+    \E          end either case modification or quoted section, think vi
 
-    + BNF to Regex translation patterns
-        
-/^ (?&osg)\ * ( (?&int)(?&dec)? | (?&dec) )
-   (?: [eE](?&osg)(?&int) )?
- $
- (?(DEFINE)
-   (?<osg>[-+]?)         # optional sign
-   (?<int>\d++)          # integer
-   (?<dec>\.(?&int))     # decimal fraction
-)/x
+    zero-width assertions
+    \b  word boundary
+    \B  except at a word boundary
+    \A  only at beginning of string
+    \Z  only at end of string, or before newline at the end
+    \z  only at end of string
+    \G  only at pos() (e.g. at the end-of-match position
+        of prior m//g)
 
-        int ::= \d+         \d+
-        int ::= ( \d+ )     (?<int> \d+ )
-        frac ::= '.' int # escape literals! -- quotemeta 
-                         # except when charclasses are in literals, e.g.
-                         # 'behavio[u]?r'
-        float ::= int frac?
-
-my $pp = qr/^(\W* (?: (\w) (?1) \g{-1} | \w? ) \W*)$/ix;
-for $s ( "saippuakauppias", "A man, a plan, a canal: Panama!" ){
-    print "'$s' is a palindrome\n" if $s =~ /$pp/;
-}
-
-        
-        lhs ::= ( s11 s12 s13 | s21 s22 s23 | s31 s32 s33 s34 )
-        (?<lhs> s11 s12 s13 | s21 s22 s23 | s31 s32 s33 s34)
-
-        lhs ::= s11 s12 s13 | s21 s22 s23 | s31 s32 s33 s34
-        (?: s11 s12 s13 | s21 s22 s23 | s31 s32 s33 s34)
-
-        lhs ::= s11 ( s12 s13) | s21 s22 s23 | (s31 s32) s33 s34 )
-        (?: s11 (?<lhs> s12 s13) | s21 s22 s23 | (?<lhs>s31 s32) s33 s34>)
-        
-        lhs ::= s11 ( s12 s13) | s21 s22 s23 | (name: s31 s32) s33 s34 )
-        (?: s11 (?<lhs> s12 s13) | s21 s22 s23 | (?<name>s31 s32) s33 s34>)
-
-        rhs is a named group with alternation
-        
-        parens define named capturing groups
-        
-        alternation
-        hierarchical grouping
-            capturing 
-            non-capturing
-        named groups
-        named patterns
-            (?(DEFINE)...)
-        assertions
-        conditional
-        
-        every symbol must end up as a '', literal, charclass or capturing group name
-
-        (?(DEFINE)(?<name>pattern)...). An insertion of a named pattern is written as (?&name)
-        
-        conditional expressions
-        
-        capturing and non-capturing
-            brackets are capturing
-            and op_declare
-            ::= captures
-              = non-capturing
-        
-        every rhs symbol must be 
-            - lhs of another rule
-            - lhs of the same rule (will recursion be supported?)
-            
-        
-        * test: text with balanced quotes -- angle_brackets.t
-        
-        - the rules' values are named capture groups + quantifier
-            - named capture group -- (?<name>...) or (?'name'...). 
-            null rule and recursion -> ()? * + quantifiers
-            sequences are recursion
-            literals will be quoted (quotemeta), so don't quote metachars in the source 
-            
-            BNF
-                - symbols
-                - rules
-                - recursion (LHS occurrence in the same rule's RHS)
-                - terminal/non-terminal (LHS occurrence in another rule's RHS
-
-            Regex
-
-                - named capture groups
-
-                        (?<name>...) or (?'name'...)
-
-                - quantifiers (also non-backtracking (+) and non-greedy (?))
-
-                        + ? * {n} {n,m}
-
-                - backreferences
-
-                        \1        [5]  Backreference to a specific capture group or buffer.
-                                      '1' may actually be any positive integer.
-                        \g1       [5]  Backreference to a specific or previous group,
-                        \g{-1}    [5]  The number may be negative indicating a relative
-                                      previous group and may optionally be wrapped in
-                                      curly brackets for safer parsing.
-                        \g{name}  [5]  Named backreference
-                        \k<name>  [5]  Named backreference
-                
-                - charclasses are passed through as is
-                
-                - comments "(?#text)"
-                
-          rule to regex
-          
-            [ lhs, [ [ s11 s12 ], [ s21 s22 ], [ s31 s32 s33 ] ] ]
-            
-            BNF -> Regex -- named capture groups + quantifiers and backreferences
-
-            rules -> named capture groups 
-            recursion -> quantifiers
-            occurrence of LHS symbol on RHS of another rule -> backreference
-            
-            text via sequitur
-            
-            lhs ::= s11 s12 | s21 s22 | s31 s32 s33 | 
-            
-            lhs ::= s11 s12
-            lhs ::= s21 s22
-            lhs ::= s31 s32 s33 
-            lhs ::= 
-            
-            (?<lhs> (s11 s12)|(s21 s22)|(s31 s32 s33) )?
-            
-            seq ::= item
-            seq ::= seq item            
-            seq ::= 
-
-            (?<seq> (?<item>))
-            (?<seq> (?<item>)+)
-            (?<seq> (?<item>)*)
-
-        - special syntax for sequences from Marpa
-        
-            seq ::= item* separator => [\n]
-            seq ::= item | separator item
-
-            (?<seq> (?<item> | ()))
-            
-        - recursive rules are backreferences -- \g{name} 
-
-        + negation (-) is negative lookahead assertion
-            - 
-        + parens are hiding
-
-        ? test that %+ hash is filled correctly
-        ? extended syntax
-
-    + literals    
-            
-            'la la " fa fa' "he he ' ha ha" -- no escaping with \
-            
-    + ^ $, SOL, newline, line-start, line-end 
-    
-    + character classes with modifiers
-        
-        - escapes and their names
-                        
-            escape      reserved bareword
-            ------      -----------------
-            \w+         word
-            \d+         digits
-
-            \w          word-char
-            \W          non-word-char
-
-            \d          digit
-            \D          non-digit
-        
-             \s        [3]  whitespace
-             \S        [3]  non-whitespace
-             \d        [3]  decimal digit
-             \D        [3]  non-digit
-             \pP       [3]  property{P}, property{Prop} for longer names
-             \PP       [3]  Match non-P
-             \X        [4]  Match Unicode "eXtended grapheme cluster"
-             \C             Match a single C-language char (octet) even if that is
-                              part of a larger UTF-8 character.  Thus it breaks up
-                              characters into their UTF-8 bytes, so you may end up
-                              with malformed pieces of UTF-8.  Unsupported in
-                              lookbehind.
-             \1        [5]  Backreference to a specific capture group or buffer.
-                              '1' may actually be any positive integer.
-             \g1       [5]  Backreference to a specific or previous group,
-             \g{-1}    [5]  The number may be negative indicating a relative
-                              previous group and may optionally be wrapped in
-                              curly brackets for safer parsing.
-             \g{name}  [5]  Named backreference
-             \k<name>  [5]  Named backreference
-             \K        [6]  Keep the stuff left of the \K, don't include it in $&
-             \N        [7]  Any character but \n.  Not affected by /s modifier
-             \v        [3]  Vertical whitespace
-             \V        [3]  Not vertical whitespace
-             \h        [3]  Horizontal whitespace
-             \H        [3]  Not horizontal whitespace
-             \R        [4]  Linebreak
-
-            \t          tab                   (HT, TAB)
-            \n          newline               (LF, NL)
-            \r          return                (CR)
-            \f          formfeed             (FF)
-            \a          alarm (bell)          (BEL)
-            \e          escape (think troff)  (ESC)
-            \cK         control char          (example: VT)
-            \x{}, \x00  character whose ordinal is the given hexadecimal number
-            \N{name}    named Unicode character or character sequence
-            \N{U+263D}  Unicode character     (example: FIRST QUARTER MOON)
-            \o{}, \000  character whose ordinal is the given octal number
-            \l          lowercase next char (think vi)
-            \u          uppercase next char (think vi)
-            \L          lowercase till \E (think vi)
-            \U          uppercase till \E (think vi)
-            \Q          quote (disable) pattern metacharacters till \E
-            \E          end either case modification or quoted section, think vi
-
-            zero-width assertions
-            \b  word boundary
-            \B  except at a word boundary
-            \A  only at beginning of string
-            \Z  only at end of string, or before newline at the end
-            \z  only at end of string
-            \G  only at pos() (e.g. at the end-of-match position
-                of prior m//g)
-
-        - negation: lookahead negative - and - (), 
-        
-            s1 - s2 
-            s1 - ( s2 s3 s4 ... )
-
-    + quantifiers -- greedy and not
-        
-        - ?, *, +, {n,m}
-        - +?, *?, ??, {n,m}?
-
-    + replacement
-        
-        - also as BNF?
-        
     - use cases
     
         - showcase -- to be refined -- https://gist.github.com/rns/8625302
@@ -449,59 +198,39 @@ for $s ( "saippuakauppias", "A man, a plan, a canal: Panama!" ){
         - hosted service
             - input your text and/or regex, get a skeleton grammar
     
-    - Pattern lib
-        - named patterns
-        - named pattern closures
-        - convert Regexp::Common
-            
-            * strings with balanced parenthesized delimiters.
-            * comments of various languages (43 languages currently).
-            * delimited strings.
-            * palindromes.
-            * lists.
-            * IPv4 addresses and MAC addresses.
-            * numbers (integers and reals).
-            * profanity.
-            * leading and trailing whitespace.
-            * zip codes.        
-            
-        - superset Regexp::Common            
-        
-            * email addresses 
-            * HTML/XML tags
-            * more numerical matchers,
-            * mail headers (including multiline ones),
-            * more URLS
-            * telephone numbers of various countries
-            * currency (universal 3 letter format, Latin-1, currency names)
-            * dates
-            * binary formats (e.g. UUencoded, MIMEd)
-            -- http://www.regular-expressions.info/examples.html
-            -- http://www.regular-expressions.info/examplesprogrammer.html
-
-        
-    - metag.bnf -- grammar to parse grammars
-
-    http://blogs.perl.org/users/jeffrey_kegler/2013/05/the-design-of-four.html
+Regexp::Common
+--------------
     
-        - possibilities
-            ?+ (??{ code }) -- road to inline actions
-            ?+ support regexes?
-                - but how to know if its a regex
-            ?+ positive lookahead assertions + and + () 
-                - ambiguous syntax
-                - s1 +( s2 s3 s4 ... ) -- lookahead positive
-                - s1 +s2 -- lookahead positive
-                - s1 +( s2 s3 s4 ... ) -- lookahead positive
-            ?+ (modifier: lhs ::= @rhs) for symbols rules
-            ?+ actions?
-            ?+ structural regular expressions?
-                    split on terminals -- structural REs
-                split (
-                    $regex, $input, sub { 
-                        split $regex, $input 
-                    } 
-                )
+    convert 
+    
+    * strings with balanced parenthesized delimiters.
+    * comments of various languages (43 languages currently).
+    * delimited strings.
+    * palindromes.
+      my $pp = qr/^(\W* (?: (\w) (?1) \g{-1} | \w? ) \W*)$/ix;
+      for $s ( "saippuakauppias", "A man, a plan, a canal: Panama!" ){
+          print "'$s' is a palindrome\n" if $s =~ /$pp/;
+      }
+    * lists.
+    * IPv4 addresses and MAC addresses.
+    * numbers (integers and reals).
+    * profanity.
+    * leading and trailing whitespace.
+    * zip codes.        
+
+    superset
+
+    * email addresses 
+    * HTML/XML tags
+    * more numerical matchers,
+    * mail headers (including multiline ones),
+    * more URLS
+    * telephone numbers of various countries
+    * currency (universal 3 letter format, Latin-1, currency names)
+    * dates
+    * binary formats (e.g. UUencoded, MIMEd)
+    -- http://www.regular-expressions.info/examples.html
+    -- http://www.regular-expressions.info/examplesprogrammer.html
 
 * quotes
     
@@ -519,50 +248,40 @@ for $s ( "saippuakauppias", "A man, a plan, a canal: Panama!" ){
 
         In a context-free grammar every rule has one LHS symbol, and zero or more RHS symbols.
 
+References
+----------
 
-    Note that a startup can be the ECMAScript pattern specification - ECMAScript implements a very low subset of perl regexp pattern, but it shows quite well how such a grammar should be structured. -- http://www.ecma-international.org/ecma-262/5.1/#sec-15.10.1
+    There are a number of projects that would, I think, be quite popular and 
+    useful but which I simply don't have the cycles to consider doing 
+    myself.  One is a Regex compiler -- a compiler from some nice BNF-ish 
+    format, to Perl regular expressions.  I'd think this could be very 
+    popular -- it would be very much in the comfort zone of some programmers 
+    who otherwise would not consider using Marpa. 
 
-    Then you might like my implementation [1] - the only subtility in this simple grammar is that I use these user-defined character classes. 
+    To be specific, this is another specialized Marpa-to-Perl compiler.  The 
+    compiler would write a Perl regex, and the Perl regex would be what 
+    actually runs.  The value added by Marpa would be that more complex 
+    regexes could be more quickly and easily written, and the output regex 
+    could be nicely pretty-printed and commented. 
 
-        [1] https://github.com/jddurand/MarpaX-Languages-ECMAScript-AST/blob/master/lib/MarpaX/Languages/ECMAScript/AST/Grammar/ECMAScript_262_5/Lexical/RegularExpressionLiteral.pm
+    Sometimes not understood is that one thing regular expressions *cannot* 
+    parse is the representation of a regular expression.  Regular 
+    expressions are defined recursively, but they do not themselves deal 
+    with recursion. 
 
-        [2] https://github.com/jddurand/MarpaX-Languages-ECMAScript-AST/blob/master/lib/MarpaX/Languages/ECMAScript/AST/Grammar/CharacterClasses.pm
+    One way to think of this project is as a Marpa super-superset of 
+    Regexp::Common, whose functionality could be incorporated.  A related 
+    effort within Perl was the DEFINE predicate for sub-patterns, but DEFINE 
+    had horrific syntax and AFAIK was little or never used. 
 
-* references
+    -- Jeffrey Kegler, https://groups.google.com/d/msg/marpa-parser/2TZn5nolyzk/u5rCDIZ0gKoJ
 
-    + origin
+    It would be awesome to have more targets, for example JavaScript. So 
+    one would be able to write a language (protocol) in BNF form and parse 
+    it in JS on client side and with perl or other language on server 
+    side. It's for sure interesting task and chalenging one.
 
-        There are a number of projects that would, I think, be quite popular and 
-        useful but which I simply don't have the cycles to consider doing 
-        myself.  One is a Regex compiler -- a compiler from some nice BNF-ish 
-        format, to Perl regular expressions.  I'd think this could be very 
-        popular -- it would be very much in the comfort zone of some programmers 
-        who otherwise would not consider using Marpa. 
-
-        To be specific, this is another specialized Marpa-to-Perl compiler.  The 
-        compiler would write a Perl regex, and the Perl regex would be what 
-        actually runs.  The value added by Marpa would be that more complex 
-        regexes could be more quickly and easily written, and the output regex 
-        could be nicely pretty-printed and commented. 
-
-        Sometimes not understood is that one thing regular expressions *cannot* 
-        parse is the representation of a regular expression.  Regular 
-        expressions are defined recursively, but they do not themselves deal 
-        with recursion. 
-
-        One way to think of this project is as a Marpa super-superset of 
-        Regexp::Common, whose functionality could be incorporated.  A related 
-        effort within Perl was the DEFINE predicate for sub-patterns, but DEFINE 
-        had horrific syntax and AFAIK was little or never used. 
-
-        -- Jeffrey Kegler, https://groups.google.com/d/msg/marpa-parser/2TZn5nolyzk/u5rCDIZ0gKoJ
-
-        It would be awesome to have more targets, for example JavaScript. So 
-        one would be able to write a language (protocol) in BNF form and parse 
-        it in JS on client side and with perl or other language on server 
-        side. It's for sure interesting task and chalenging one.
-
-        -- Ruslan Zakirov, https://groups.google.com/d/msg/marpa-parser/2TZn5nolyzk/kqq5NM2zkIQJ
+    -- Ruslan Zakirov, https://groups.google.com/d/msg/marpa-parser/2TZn5nolyzk/kqq5NM2zkIQJ
 
     + https://metacpan.org/pod/Regexp::Grammars
         - must do what they can do
@@ -570,137 +289,13 @@ for $s ( "saippuakauppias", "A man, a plan, a canal: Panama!" ){
     + https://metacpan.org/pod/Regexp::Common
         - "Marpa super-superset of Regexp::Common, whose functionality could be incorporated"
 
-    - http://www.regular-expressions.info/
+    http://www.regular-expressions.info/
+    http://stackoverflow.com/questions/1435411/what-is-the-bnf-for-a-regex-in-order-to-write-a-full-or-partial-parser
 
-    - http://stackoverflow.com/questions/1435411/what-is-the-bnf-for-a-regex-in-order-to-write-a-full-or-partial-parser
+    http://www.codinghorror.com/blog/2008/06/regular-expressions-now-you-have-two-problems.html
 
-    - http://www.codinghorror.com/blog/2008/06/regular-expressions-now-you-have-two-problems.html
-
-    - http://stackoverflow.com/questions/13816439/left-linear-and-right-linear-grammars/13945932#13945932
-
-* regex BNFs
-
-    - http://www3.sympatico.ca/dbiggar/RE.home.html
-
-    <re> ::= <expression> { <expression> }
-                   | <re> '|' <re>
- 
-    <expression> ::= <term>
-                   | <term> '?'
-                   | <term> '+'
-                   | <term> '*'
- 
-          <term> ::= <label>
-                   | '(' <re> ')'
- 
-         <label> ::= <symbol>
-                   | '[' <range> { <range> } ']'
-                   | '[' ']' { <range> } ']'
-                   | '[' '^' <range> { <range> } ']'
-                   | '[' '^' ']' { <range> } ']'
- 
-         <range> ::= <symbol>
-                   | <symbol> '-' <symbol>
- 
-        <symbol> ::= '.'
-                   | 0 .. n (any element of alphabet)
-                   | '\' <symbol>
-          
-          
-    - http://www.cs.sfu.ca/~cameron/Teaching/384/99-3/regexp-plg.html
-
-            <RE>     ::=     <union> | <simple-RE>
-            <union>  ::=    <RE> "|" <simple-RE>
-            <simple-RE>  ::=     <concatenation> | <basic-RE>
-            <concatenation>  ::=    <simple-RE> <basic-RE>
-            <basic-RE>   ::=     <star> | <plus> | <elementary-RE>
-            <star>   ::=    <elementary-RE> "*"
-            <plus>   ::=    <elementary-RE> "+"
-            <elementary-RE>  ::=     <group> | <any> | <eos> | <char> | <set>
-            <group>  ::=    "(" <RE> ")"
-            <any>    ::=    "."
-            <eos>    ::=    "$"
-            <char>   ::=    any non metacharacter | "\" metacharacter
-            <set>    ::=     <positive-set> | <negative-set>
-            <positive-set>   ::=    "[" <set-items> "]"
-            <negative-set>   ::=    "[^" <set-items> "]"
-            <set-items>  ::=    <set-item> | <set-item> <set-items>
-            <set-items>  ::=    <range> | <char>
-            <range>  ::=    <char> "-" <char>
-
-    - http://web.archive.org/web/20090129224504/http://faqts.com/knowledge_base/view.phtml/aid/25718/fid/200               
-
-            expression = term
-                         term | expression
-            term = factor
-                   factor term
-
-            factor = atom
-                     atom metacharacter
-
-            atom = character
-                   .
-                   ( expression )
-                   [ characterclass ]
-                   [ ^ characterclass ]
-                   { min }
-                   { min ,  }
-                   { min , max }
-            characterclass = characterrange
-                             characterrange characterclass
-
-            characterrange = begincharacter
-                             begincharacter - endcharacter
-
-            begincharacter = character
-            endcharacter = character
-
-            character =
-                        anycharacterexceptmetacharacters
-
-                        \ anycharacterexceptspecialcharacters
-
-            metacharacter = ?
-                            * {=0 or more, greedy}
-                            *? {=0 or more, non-greedy}
-                            + {=1 or more, greedy}
-                            +? {=1 or more, non-greedy}
-                            ^ {=begin of line character}
-                            $ {=end of line character}
-                            $` {=the characters to the left of the match}
-                            $' {=the characters to the right of the match}
-                            $& {=the characters that are matched}
-                            \t {=tab character}
-                            \n {=newline character}
-                            \r {=carriage return character}
-                            \f {=form feed character}
-                            \cX {=control character CTRL-X}
-                            \N {=the characters in Nth tag (if on match side)}
-                            $N{=the characters in Nth tag (if not on match side)}
-                            \NNN {=octal code for character NNN}
-                            \b {=match a 'word' boundary}
-                            \B {=match not a 'word' boundary}
-                            \d {=a digit, [0-9]}
-                            \D {=not a digit, [^0-9]}
-                            \s {=whitespace, [ \t\n\r\f]}
-                            \S {=not a whitespace, [^ \t\n\r\f]}
-                            \w {='word' character, [a-zA-Z0-9_]}
-                            \W {=not a 'word' character, [^a-zA-Z0-9_]}
-                            \Q {=put a quote (de-meta) on characters, until \E}
-                            \U {=change characters to uppercase, until \E}
-                            \L {=change characters to uppercase, until \E}
-
-            min = integer
-            max = integer
-            integer = digit
-                      digit integer
-
-            anycharacter = ! " # $ % & ' ( ) * + , - . / :
-                           ; < = > ? @ [ \ ] ^ _ ` { | } ~
-                           0 1 2 3 4 5 6 7 8 9
-                           A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
-                           a b c d e f g h i j k l m n o p q r s t u v w x y z
-
+    http://stackoverflow.com/questions/13816439/left-linear-and-right-linear-grammars/13945932#13945932
+    http://stackoverflow.com/questions/10510700/how-can-i-transform-this-backus-naur-form-expression-into-a-regex-net?rq=1
 
 Liberal Regex Pattern for URLs
 https://gist.github.com/gruber/8891611
@@ -755,4 +350,3 @@ https://gist.github.com/gruber/8891611
   )
 )
 
-http://stackoverflow.com/questions/10510700/how-can-i-transform-this-backus-naur-form-expression-into-a-regex-net?rq=1

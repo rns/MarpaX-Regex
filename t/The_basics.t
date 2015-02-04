@@ -35,7 +35,7 @@ lexeme default = action => [ name, value ] latm => 1
     <bracketed name> ~ '<' <bracketed name string> '>'
     <bracketed name string> ~ [\s\.\w]+
 
-    atom ::= literal
+    primary ::= literal
         | <character class>
         | <character escape>
         | symbol
@@ -45,25 +45,25 @@ lexeme default = action => [ name, value ] latm => 1
     metacharacter ~ '^' | '$' | '.' | [\\\\] | '|'
     <character escape> ~ '\d' | '\w'
     quantifier ::=
-             '*'  | '+'  | '?'
-        |    '*?' | '+?' | '??'
-        |   '*+' | '++' | '?+'
-        |   '{' <unsigned integer> '}'
-        |   '{' <unsigned integer> comma '}'
-        |   '{' <unsigned integer> comma <unsigned integer> '}'
-        |   '{' <unsigned integer> '}?'
-        |   '{' <unsigned integer> comma '}?'
-        |   '{' <unsigned integer> comma <unsigned integer> '}?'
-        |   '{' <unsigned integer> '}+'
-        |   '{' <unsigned integer> comma '}+'
-        |   '{' <unsigned integer> comma <unsigned integer> '}+'
+          '*'  | '+'  | '?'
+        | '*?' | '+?' | '??'
+        | '*+' | '++' | '?+'
+        | '{' <unsigned integer> '}'
+        | '{' <unsigned integer> comma '}'
+        | '{' <unsigned integer> comma <unsigned integer> '}'
+        | '{' <unsigned integer> '}?'
+        | '{' <unsigned integer> comma '}?'
+        | '{' <unsigned integer> comma <unsigned integer> '}?'
+        | '{' <unsigned integer> '}+'
+        | '{' <unsigned integer> comma '}+'
+        | '{' <unsigned integer> comma <unsigned integer> '}+'
 
     <unsigned integer> ~ [\d]+
     comma ~ ','
 
     # grouping and alternation
     group ::=
-            atom
+            primary
         | '(' group ')' assoc => group
         || group group
 
