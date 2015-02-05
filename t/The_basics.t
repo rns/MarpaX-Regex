@@ -13,7 +13,7 @@ use Marpa::R2;
 
 my $dsl = q{;
 :default ::= action => [ name, values ]
-lexeme default = action => [ name, value ] latm => 1
+lexeme default = action => [ name, values ] latm => 1
 
     statements ::= statement+
 
@@ -53,17 +53,16 @@ lexeme default = action => [ name, value ] latm => 1
     <bracketed name string> ~ [\s\.\w]+
 
     primary ::= literal
-        | <character class> quantifier
-        | symbol quantifier
-        | <character escape> quantifier
-        | metacharacter # alternation can follow a metacharacter, e.g. ^, yes
-        | alternation
+              | <character class> quantifier
+              | symbol quantifier
+              | <character escape> quantifier
+              | metacharacter # alternation can follow a metacharacter, e.g. ^, yes
+              | alternation
 
     # grouping and alternation
-    group ::=
-            primary
-        | '(' group ')' quantifier assoc => group
-        || group group
+    group ::= primary
+            | '(' group ')' quantifier assoc => group
+           || group group
 
     # statement
     statement           ::= <empty rule> | <alternative rule>
