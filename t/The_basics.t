@@ -18,23 +18,21 @@ lexeme default = action => [ name, value ] latm => 1
     statements ::= statement+
 
     # bottom to top order
-    metacharacter ~ '^' | '$' | '.' | [\\\\] | '|'
+    metacharacter ~ '^' | '$' | '.' | [\\\\]
+    alternation ~ '|'
     <character escape>  ~ '\d' | '\w'
 
+    # spaces are allowed between ? and +, hence G1 rule
     quantifier ::=
-          '*'  | '+'  | '?'
-        # '*' '?' leads to ambiguous parse
-        | '*?' | '+?' | '??'
-        | '*+' | '++' | '?+'
-        | '{' integer '}'
-        | '{' integer comma '}'
-        | '{' integer comma integer '}'
-        | '{' integer '}?'
-        | '{' integer comma '}?'
-        | '{' integer comma integer '}?'
-        | '{' integer '}+'
-        | '{' integer comma '}+'
-        | '{' integer comma integer '}+'
+    quantifier ::= '?' <quantifier modifier>
+                 | '*' <quantifier modifier>
+                 | '+' <quantifier modifier>
+                 | '{' integer '}' <quantifier modifier>
+                 | '{' integer comma '}' <quantifier modifier>
+                 | '{' integer comma integer '}' <quantifier modifier>
+    <quantifier modifier> ::=
+    <quantifier modifier> ::= '?' | '+'
+
     integer ~ [\d]+
     comma   ~ ','
 
@@ -55,17 +53,16 @@ lexeme default = action => [ name, value ] latm => 1
     <bracketed name string> ~ [\s\.\w]+
 
     primary ::= literal
-        | <character class>
-        | <character escape>
-        | symbol
-        | metacharacter
-        | quantifier
+        | <character class> quantifier
+        | symbol quantifier
+        | <character escape> quantifier
+        | metacharacter # alternation can follow a metacharacter? yes
+        | alternation
 
     # grouping and alternation
-    # must group group be group '|' group, but this doesn't allow empty groups
     group ::=
             primary
-        | '(' group ')' assoc => group
+        | '(' group ')' quantifier assoc => group
         || group group
 
     # statements
@@ -219,6 +216,14 @@ or written in the compact form,
 my $slg = Marpa::R2::Scanless::G->new( { source  => \$dsl } );
 
 =head2 translate pseudocode
+
+    sanity check
+        merge statements with the same lhs, like
+            lhs ::= rhs1
+            lhs ::= rhs2
+        to
+            lhs ::= rhs1 | rhs2
+        by adding a group to alternatives
 
     until there is no symbols to replace
         find terminals (rules without symbols)
