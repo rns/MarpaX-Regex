@@ -17,8 +17,7 @@ lexeme default = action => [ name, values ] latm => 1
 
     statements ::= statement+
 
-    # bottom to top, grouped -- char, literal, charclass, symbol, primary, group, statement
-    alternation         ~ '|'
+    # bottom to top: char, literal, charclass, symbol, grouping/alternation, statement
     metacharacter       ~ '^' | '$' | '.' | [\\\\]
     <character escape>  ~ '\d' | '\w'
 
@@ -44,6 +43,8 @@ lexeme default = action => [ name, values ] latm => 1
     <character class characters> ~ <character class character>+
     <character class character> ~ [^\]] | '\[' | '\]' | '[:' | ':]'
 
+    # these will be used in named captures so
+    # the rules for regexp NAMEs must be obeyed
     symbol ::= <symbol name>
     <symbol name> ::= <bare name>
     <symbol name> ::= <bracketed name>
@@ -51,6 +52,7 @@ lexeme default = action => [ name, values ] latm => 1
     <bracketed name> ~ '<' <bracketed name string> '>'
     <bracketed name string> ~ [\s\.\w]+
 
+    # grouping and alternation
     primary ::= literal
               | <character class>
               | <character class> quantifier
@@ -59,15 +61,18 @@ lexeme default = action => [ name, values ] latm => 1
               | <character escape>
               | <character escape> quantifier
               | metacharacter
-              | alternation
+# uncomment the below 2 lines to allow empty groups (null regex)
+#              | alternation
+#    alternation         ~ '|'
 
-    # grouping and alternation
     group ::= primary
             | '(' group ')' quantifier assoc => group
-            | '(' group ')' assoc => group
-           || group group
+           || '(' group ')' assoc => group
+           || group group       # and
+# comment out the below line to allow empty groups (null regex)
+           || group '|' group   # or
 
-    # statement
+    # rules
     statement           ::= <empty rule> | <alternative rule>
     <empty rule>        ::= lhs (<op declare bnf>)
     <alternative rule>  ::= lhs (<op declare bnf>) alternatives
@@ -130,7 +135,15 @@ my $tests = [
     # matches 'ad', 'bd', or 'cd'
     [ q{ s ::= ('a'|[bc])'d' }, [ 'ad', 'bd', 'cd' ], [ 1, 1, 1 ], [ 'a', 'b', 'c' ], 'grouping with character class' ],
 
-    [ q{ s ::= 'house' ( 'cat' | ) }, [ 'housecat', 'house' ], [ 1, 1 ], [ 'cat', '' ], 'grouping, empty alternative' ],
+# the below 2 tests show the difference between empty capturing group
+# supported as is or via empty rule
+    [ q{ s ::= 'house' ( 'cat' | ) }, [ 'housecat', 'house' ], [ 1, 1 ], [ 'cat', '' ],
+        'grouping, empty alternative as null regex' ],
+    [ q{ s ::= 'house' ( 'cat' | <empty> )
+         <empty> ::=
+        }, [ 'housecat', 'house' ], [ 1, 1 ], [ 'cat', '' ],
+        'grouping, empty alternative by empty rule' ],
+#
     [ q{ s ::= 'house' ( 'cat' ( 's' |)|) },
         [ 'housecats',      'housecat',    'house' ],
         [ 1,                1,             1 ],
@@ -265,6 +278,7 @@ sub terminals{
         }
     );
 }
+
 sub primaries{
     my ($ast) = @_;
 
@@ -272,6 +286,7 @@ sub primaries{
 
     return ast_find( $ast, sub {
         my ($node_id, @children) = @{ $_[0] };
+        return 0 unless defined $node_id eq 'group';
         return 0 unless $node_id eq 'group';
 #        return 0 unless ref $children[0] eq "ARRAY";
 #        return 0 unless ref $children[0]->[1] eq "ARRAY";
