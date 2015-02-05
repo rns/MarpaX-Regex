@@ -62,15 +62,15 @@ lexeme default = action => [ name, values ] latm => 1
               | <character escape> quantifier
               | metacharacter
 # uncomment the below 2 lines to allow empty groups (null regex)
-#              | alternation
-#    alternation         ~ '|'
+              | alternation
+    alternation         ~ '|'
 
     group ::= primary
             | '(' group ')' quantifier assoc => group
-           || '(' group ')' assoc => group
+            | '(' group ')' assoc => group
            || group group       # and
 # comment out the below line to allow empty groups (null regex)
-           || group '|' group   # or
+#           || group '|' group   # or
 
     # rules
     statement           ::= <empty rule> | <alternative rule>
@@ -139,10 +139,10 @@ my $tests = [
 # supported as is or via empty rule
     [ q{ s ::= 'house' ( 'cat' | ) }, [ 'housecat', 'house' ], [ 1, 1 ], [ 'cat', '' ],
         'grouping, empty alternative as null regex' ],
-    [ q{ s ::= 'house' ( 'cat' | <empty> )
-         <empty> ::=
-        }, [ 'housecat', 'house' ], [ 1, 1 ], [ 'cat', '' ],
-        'grouping, empty alternative by empty rule' ],
+#    [ q{ s ::= 'house' ( 'cat' | <empty> )
+#         <empty> ::=
+#        }, [ 'housecat', 'house' ], [ 1, 1 ], [ 'cat', '' ],
+#        'grouping, empty alternative by empty rule' ],
 #
     [ q{ s ::= 'house' ( 'cat' ( 's' |)|) },
         [ 'housecats',      'housecat',    'house' ],
@@ -174,6 +174,10 @@ my $tests = [
          <optional exponent> ::= ([eE][+-]?\d+)?
          digit               ::= \d
         }, '1.3', 1, '1.3', 'building a regexp, unfactored form' ],
+];
+
+=pod more tests
+
     [ q{
          number              ::= ^ (<optional sign>) (<f.p. mantissa> | integer) <optional exponent> $
          <optional sign>     ::= [+-]?
@@ -198,9 +202,7 @@ my $tests = [
     # possible todo: feature: infer a more compact form below from the ast
     # possible todo: feature: assemble empty rules to form ()? groups
     #    /^[+-]?\ *(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/;
-];
 
-=pod more tests
 
 /^
             [+-]?\ *      # first, match an optional sign
@@ -286,11 +288,11 @@ sub primaries{
 
     return ast_find( $ast, sub {
         my ($node_id, @children) = @{ $_[0] };
-        return 0 unless defined $node_id eq 'group';
-        return 0 unless $node_id eq 'group';
+        return 0 unless defined $node_id;
+#        warn "# group \$children[0]:\n", Dumper $children[0];
+        return 0 unless $_[0]->[0] eq 'group';
 #        return 0 unless ref $children[0] eq "ARRAY";
 #        return 0 unless ref $children[0]->[1] eq "ARRAY";
-#        warn "# group \$children[0]:\n", Dumper $children[0];
 #        return 1 if $children[0]->[1] eq 'primary';
         return 0 unless ref $_[0]->[1] eq "ARRAY";
         return 1 if $_[0]->[1]->[0] eq 'primary';
@@ -298,49 +300,89 @@ sub primaries{
     } );
 }
 
+sub inaccessible{
+    my ($ast, $symbol) = @_;
+    my $found = ast_find( $ast, sub {
+#        warn $_[0]->[0];
+        return 0 unless $_[0]->[0] eq 'symbol name';
+        return $_[0]->[1]->[1] eq $symbol;
+    } );
+#    warn "$symbol: ", @$found;
+    return @$found == 1;
+}
+
+sub delete_statement_by_lhs{
+    my ($ast, $lhs) = @_;
+
+    local $Data::Dumper::Indent = 0;
+    my ($node_id, @children) = @{ $ast };
+    # delete_child(sub{})
+    # find index
+    my $ix = undef;
+    for my $i (0..@children-1){
+        my $statement = $children[$i];
+#        warn "# statement: ", Dumper $statement;
+        my $lhs_i = $statement->[1]->[1]->[1]->[1]->[1];
+#        warn Dumper $i, $lhs_i;
+        $ix = $i if $lhs eq $lhs_i;
+    }
+#    warn "# statements: ", Dumper $ast;
+#    warn "deleting statement ", Dumper $ast->[$ix+1];
+    splice( @{ $ast }, $ix + 1, 1 ) if defined $ix;
+}
+
 sub substitute {
     my ($ast) = @_;
 
     local $Data::Dumper::Indent = 0;
 
-    my $terminals = terminals($ast);
-    my $substitutes = {};
-    for my $t (@$terminals){
-#        warn "# terminal:\n", Dumper($t);
-        my ($node_id, @children) = @$t;
-        my $lhs = $children[0]->[1]->[1]->[1]->[1];
-        # get terminal's alternatives group
-        my $group = $children[0]->[2]->[1];
-        push @{ $substitutes->{$lhs} }, [ $t, $group ];
-    }
-#    warn "# substitutes:\n", Dumper $substitutes;
+SUBSTITUTE:
+    for my $subst_iter (0..10){
 
-    my $primaries = primaries($ast);
-    for my $p (@$primaries){
-#        warn "# p:\n", Dumper($p);
-        next unless $p->[1]->[1]->[0] eq "symbol";
-#        warn Dumper $p->[1]->[1]->[1]->[1]->[1];
-
-        my $symbol_name = $p->[1]->[1]->[1]->[1]->[1];
-        next unless exists $substitutes->{$symbol_name};
-        warn "\n# substitute $symbol_name group\n", Dumper($p), "\nwith:\n  ";
-        # non-terminal's name must become terminal's name
-        # new terminal: $symbol_name =>
-        # there can be several groups under the same terminal lhs, their contents
-        # must be concatenated to form group/primary contents
-        for my $subst (@{ $substitutes->{$symbol_name} } ){
-            my ($statement, $group) = @$subst;
-            warn "this group:\n  ", Dumper $group;
-            warn "and set up new terminal statement for the next cycle:\n  ",
-                Dumper $statement,
-                "if there are references to it from other rules (unlike <optional sign>, which should be deleted)";
-            @$p = @$group;
+        my $terminals = terminals($ast);
+        last SUBSTITUTE unless @$terminals;
+        my $substitutes = {};
+        for my $t (@$terminals){
+            warn "# terminal:\n", Dumper($t);
+            my ($node_id, @children) = @$t;
+            my $lhs = $children[0]->[1]->[1]->[1]->[1];
+            # get terminal's alternatives group
+            my $group = $children[0]->[2]->[1];
+            push @{ $substitutes->{$lhs} }, [ $t, $group ];
         }
-        # terminal's contents must become non-terminal's contents
-        # new group:
-    }
-    local $Data::Dumper::Indent = 1;
-    warn "after substitute:", Dumper $ast;
+    #    warn "# substitutes:\n", Dumper $substitutes;
+
+        my $primaries = primaries($ast);
+        for my $p (@$primaries){
+#            warn "# primary:\n", Dumper($p);
+            next unless ref $p->[1]->[1] eq "ARRAY";
+            next unless $p->[1]->[1]->[0] eq "symbol";
+    #        warn Dumper $p->[1]->[1]->[1]->[1]->[1];
+
+            my $symbol_name = $p->[1]->[1]->[1]->[1]->[1];
+            next unless exists $substitutes->{$symbol_name};
+            warn "\n# substitute $symbol_name group\n", Dumper($p);
+            warn "before substitution:", Dumper $ast;
+            for my $subst (@{ $substitutes->{$symbol_name} } ){
+                my ($statement, $group) = @$subst;
+                warn "with this group:\n  ", Dumper $group;
+                warn "and set up new terminal statement for the next cycle:\n  ",
+                    Dumper $statement,
+                    "if there are references to it from other rules (unlike <optional sign>, which should be deleted)";
+                $p->[1]->[1] = $group->[1];
+            }
+    #        local $Data::Dumper::Indent = 1;
+            warn "after substitution:", Dumper $ast;
+            my $inaccessible = inaccessible($ast, $symbol_name);
+            if ($inaccessible) {
+                warn "$symbol_name is inaccessible, deleting";
+                delete_statement_by_lhs($ast, $symbol_name);
+            }
+        }
+        my $re = translate( $ast );
+        diag "RE: /$re/";
+    } ## for
+    warn "after all substitutions:", Dumper $ast;
 }
 
 =pod
@@ -425,6 +467,7 @@ for my $test (@$tests){
 
         skip "BNF source parse error", 3 unless defined $ast and $must_parse;
 
+#        $ast = eval(Dumper( $ast )); # we need data, not refs
         substitute($ast);
         my $re = translate( $ast );
         diag "RE: /$re/";
