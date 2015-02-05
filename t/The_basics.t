@@ -17,9 +17,9 @@ lexeme default = action => [ name, value ] latm => 1
 
     statements ::= statement+
 
-    # bottom to top order
-    metacharacter ~ '^' | '$' | '.' | [\\\\]
-    alternation ~ '|'
+    # bottom to top, grouped -- char, literal, charclass, symbol, primary, group, statement
+    metacharacter       ~ '^' | '$' | '.' | [\\\\]
+    alternation         ~ '|'
     <character escape>  ~ '\d' | '\w'
 
     # spaces are allowed between ? and +, hence G1 rule
@@ -27,13 +27,13 @@ lexeme default = action => [ name, value ] latm => 1
     quantifier ::= '?' <quantifier modifier>
                  | '*' <quantifier modifier>
                  | '+' <quantifier modifier>
-                 | '{' integer '}' <quantifier modifier>
-                 | '{' integer comma '}' <quantifier modifier>
-                 | '{' integer comma integer '}' <quantifier modifier>
+                 | '{' uint '}' <quantifier modifier>
+                 | '{' uint comma '}' <quantifier modifier>
+                 | '{' uint comma uint '}' <quantifier modifier>
     <quantifier modifier> ::=
     <quantifier modifier> ::= '?' | '+'
 
-    integer ~ [\d]+
+    uint    ~ [\d]+
     comma   ~ ','
 
     literal ::= ( ["] ) <string without double quotes and metacharacters> ( ["] )
@@ -56,7 +56,7 @@ lexeme default = action => [ name, value ] latm => 1
         | <character class> quantifier
         | symbol quantifier
         | <character escape> quantifier
-        | metacharacter # alternation can follow a metacharacter? yes
+        | metacharacter # alternation can follow a metacharacter, e.g. ^, yes
         | alternation
 
     # grouping and alternation
@@ -65,14 +65,12 @@ lexeme default = action => [ name, value ] latm => 1
         | '(' group ')' quantifier assoc => group
         || group group
 
-    # statements
-    statement ::= <empty rule> | <alternative rule>
-
-    <empty rule> ::= lhs (<op declare bnf>)
-    <alternative rule> ::= lhs (<op declare bnf>) alternatives
-
-    alternatives ::= group
-    lhs ::= <symbol name>
+    # statement
+    statement           ::= <empty rule> | <alternative rule>
+    <empty rule>        ::= lhs (<op declare bnf>)
+    <alternative rule>  ::= lhs (<op declare bnf>) alternatives
+    lhs                 ::= <symbol name>
+    alternatives        ::= group
     <op declare bnf> ~ '::='
 
 :discard ~ whitespace
@@ -201,7 +199,7 @@ my $tests = [
                     \d+       # start out with a ...
                     (
                             \.\d* # mantissa of the form a.b or a.
-                    )?        # ? takes care of integers of the form a
+                    )?       # ? takes care of integers of the form a
                   |\.\d+     # mantissa of the form .b
             )
             ([eE][+-]?\d+)?  # finally, optionally match an exponent
@@ -221,9 +219,9 @@ my $slg = Marpa::R2::Scanless::G->new( { source  => \$dsl } );
         merge statements with the same lhs, like
             lhs ::= rhs1
             lhs ::= rhs2
-        to
-            lhs ::= rhs1 | rhs2
-        by adding a group to alternatives
+        to a group under the lhs
+            lhs ::= rhs1 '|' rhs2
+        by joing the groups with [ 'group', [ 'primary', [ 'alternation', '|' ] ] ]
 
     until there is no symbols to replace
         find terminals (rules without symbols)
