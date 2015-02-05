@@ -18,19 +18,18 @@ lexeme default = action => [ name, values ] latm => 1
     statements ::= statement+
 
     # bottom to top, grouped -- char, literal, charclass, symbol, primary, group, statement
-    metacharacter       ~ '^' | '$' | '.' | [\\\\]
     alternation         ~ '|'
+    metacharacter       ~ '^' | '$' | '.' | [\\\\]
     <character escape>  ~ '\d' | '\w'
 
     # spaces are allowed between ? and +, hence G1 rule
-    quantifier ::=
-    quantifier ::= '?' <quantifier modifier>
+    quantifier ::= '?' | '*' | '+'
+                 | '?' <quantifier modifier>
                  | '*' <quantifier modifier>
                  | '+' <quantifier modifier>
-                 | '{' uint '}' <quantifier modifier>
-                 | '{' uint comma '}' <quantifier modifier>
-                 | '{' uint comma uint '}' <quantifier modifier>
-    <quantifier modifier> ::=
+                 | '{' uint '}'
+                 | '{' uint comma '}'
+                 | '{' uint comma uint '}'
     <quantifier modifier> ::= '?' | '+'
 
     uint    ~ [\d]+
@@ -53,15 +52,19 @@ lexeme default = action => [ name, values ] latm => 1
     <bracketed name string> ~ [\s\.\w]+
 
     primary ::= literal
+              | <character class>
               | <character class> quantifier
+              | symbol
               | symbol quantifier
+              | <character escape>
               | <character escape> quantifier
-              | metacharacter # alternation can follow a metacharacter, e.g. ^, yes
+              | metacharacter
               | alternation
 
     # grouping and alternation
     group ::= primary
             | '(' group ')' quantifier assoc => group
+            | '(' group ')' assoc => group
            || group group
 
     # statement
@@ -109,12 +112,6 @@ my $tests = [
     [ q{ s ::= [a-z]{2} }, 'hello world', 1, [ 1 ], 'exactly 2 character class' ],
     [ q{ s ::= [a-z]{2,} }, 'hello world', 1, [ 1 ], '2 or more character class' ],
     [ q{ s ::= [a-z]{2,3} }, 'hello world', 1, [ 1 ], '2 or 3 character class' ],
-    [ q{ s ::= [a-z]{2}? }, 'hello world', 1, [ 1 ], 'non-greedy 2 or more character class' ],
-    [ q{ s ::= [a-z]{2,}? }, 'hello world', 1, [ 1 ], 'non-greedy 2 or more character class' ],
-    [ q{ s ::= [a-z] { 2 , 3 } ? }, 'hello world', 1, [ 1 ], 'non-greedy 2 or 3 character class' ],
-    [ q{ s ::= [a-z]{2}+ }, 'hello world', 1, [ 1 ], 'non-backtracking (possessive) exactly 2 character class' ],
-    [ q{ s ::= [a-z]{2,}+ }, 'hello world', 1, [ 1 ], 'non-backtracking 2 or more character class' ],
-    [ q{ s ::= [^a-z] { 2 , 3 } + }, 'hello world', '', [], 'non-backtracking 2 or 3 character class' ],
     [ q{ s ::= 'lit[a-z]ral' }, 'literal', 1, [ 1 ], 'embedded in literal character class' ],
     # alternation
     [ q{ s ::= 'cat' | 'dog' | 'bird' }, "cats and dogs", 1, [ 1 ], 'alternation: match literal the first alternative' ],
