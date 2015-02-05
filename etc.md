@@ -2,10 +2,20 @@
 ============
 
 improve build- and read-ability
-move to Marpa::R2 for long strings and hard regexes
+  define names for metacharacters and character escapes
+  
+move to Marpa::R2 for long strings and/or hard regexes
 
-priorities
+Syntax
+------    
+
+# symbols in RE groups, empty groups, <> optional for symbols
+  s ::= 'house' ( 'cat' |)      
+  s ::= 'house' ( 'cat' ( 's' |) |)
+  
+Priorities
 ----------
+  
   substitution
 
   escaped metacharacters in literals
@@ -13,6 +23,12 @@ priorities
 
   coerce symbol names to REs
     Currently NAME is restricted to simple identifiers only.  In other words, it must match "/^[_A-Za-z][_A-Za-z0-9]*\z/" or its Unicode extension (see utf8), though it is not extended by the locale (see perllocale).
+  
+  names for character escapes, metacharacters and other line noise
+      <start of line>   ::= ^
+      <end of line>     ::= $
+      <word character>  ::= \w
+      <digit>           ::= \d  
   
 use cases
   Building regexp as a rewriting system
@@ -143,7 +159,7 @@ RE escapes and their names
                       curly brackets for safer parsing.
      \g{name}  [5]  Named backreference
      \k<name>  [5]  Named backreference
-     \K        [6]  Keep the stuff left of the \K, don't include it in $&
+     \K        [6]  Keep the stuff left of the \K, do not include it in $&
      \N        [7]  Any character but \n.  Not affected by /s modifier
      \v        [3]  Vertical whitespace
      \V        [3]  Not vertical whitespace
@@ -227,6 +243,55 @@ Regexp::Common
         -- Jeffrey Kegler, [Marpa IRC Channel](http://irclog.perlgeek.de/marpa/2014-01-15#i_8120641}
 
         In a context-free grammar every rule has one LHS symbol, and zero or more RHS symbols.
+
+Syntax Options
+--------------
+
+https://github.com/jddurand/MarpaX-Languages-ECMAScript-AST/blob/master/lib/MarpaX/Languages/ECMAScript/AST/Grammar/ECMAScript_262_5/Pattern.pm
+
+# bareword literals, <> required for symbols
+  <s> ::= house ( cat | <none> )
+  <none> ::= # empty rule
+
+# RE in BNF
+  <regex>       ::= <term> '|' <regex> |  <term>
+  <term>        ::= { <factor> } # one or more
+  <factor>      ::= <base> { '*' }
+  <base>        ::= <char> |  '\\' <char> |  '(' <regex> ')'  
+# BNF in BNF
+  <syntax>      ::= <rule> | <rule> <syntax>
+  <rule>        ::= "<" <rule-name> ">" "::=" <expression>
+  <expression>  ::= <list> | <list> "|" <expression>
+  <list>        ::= <term> | <term> <list>
+  <term>        ::= <literal> | "<" <rule-name> ">"
+  <literal>     ::= '"' <text> '"' | "'" <text> "'"
+  <text>
+  <rule-name>
+# EBNF in EBNF
+  letter = "A" | "B" | "C" | "D" | "E" | "F" | "G"
+         | "H" | "I" | "J" | "K" | "L" | "M" | "N"
+         | "O" | "P" | "Q" | "R" | "S" | "T" | "U"
+         | "V" | "W" | "X" | "Y" | "Z" ;
+  digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+  symbol = "[" | "]" | "{" | "}" | "(" | ")" | "<" | ">"
+         | "'" | '"' | "=" | "|" | "." | "," | ";" ;
+  character = letter | digit | symbol | "_" ;
+
+  identifier = letter , { letter | digit | "_" } ;
+  terminal = "'" , character , { character } , "'" 
+           | '"' , character , { character } , '"' ;
+
+  lhs = identifier ;
+  rhs = identifier
+       | terminal
+       | "[" , rhs , "]"
+       | "{" , rhs , "}"
+       | "(" , rhs , ")"
+       | rhs , "|" , rhs
+       | rhs , "," , rhs ;
+
+  rule = lhs , "=" , rhs , ";" ;
+  grammar = { rule } ;
 
 References
 ----------
