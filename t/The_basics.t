@@ -331,10 +331,19 @@ sub delete_statement_by_lhs{
     splice( @{ $ast }, $ix + 1, 1 ) if defined $ix;
 }
 
+sub re_compiles{
+    my ($ast) = @_;
+    my $re = translate( $ast );
+    eval { qr/$re/x };
+    warn "compile failure: $@!" if $@;
+    return $re;
+}
+
 sub substitute {
     my ($ast) = @_;
 
     local $Data::Dumper::Indent = 0;
+    diag "RE before substitute(): /" . re_compiles( $ast ) . "/";
 
 SUBSTITUTE:
     for my $subst_iter (0..10){
@@ -348,6 +357,8 @@ SUBSTITUTE:
             my $lhs = $children[0]->[1]->[1]->[1]->[1];
             # get terminal's alternatives group
             my $group = $children[0]->[2]->[1];
+            # TODO: merge terminals with the same lhs
+            # to a group joined with '|'
             push @{ $substitutes->{$lhs} }, [ $t, $group ];
         }
     #    warn "# substitutes:\n", Dumper $substitutes;
@@ -363,13 +374,16 @@ SUBSTITUTE:
             next unless exists $substitutes->{$symbol_name};
             warn "\n# substitute $symbol_name group\n", Dumper($p);
             warn "before substitution:", Dumper $ast;
+
             for my $subst (@{ $substitutes->{$symbol_name} } ){
                 my ($statement, $group) = @$subst;
                 warn "with this group:\n  ", Dumper $group;
-                warn "and set up new terminal statement for the next cycle:\n  ",
-                    Dumper $statement,
-                    "if there are references to it from other rules (unlike <optional sign>, which should be deleted)";
-                $p->[1]->[1] = $group->[1];
+#                warn "and set up new terminal statement for the next cycle:\n  ",
+#                    Dumper $statement,
+#                    "if there are references to it from other rules (unlike <optional sign>, which should be deleted)";
+                # this doesn't work for digit group
+                $p->[1]->[1] = $group;
+                diag "RE after substitution: /" . re_compiles( $ast ) . "/";
             }
     #        local $Data::Dumper::Indent = 1;
             warn "after substitution:", Dumper $ast;
@@ -378,9 +392,8 @@ SUBSTITUTE:
                 warn "$symbol_name is inaccessible, deleting";
                 delete_statement_by_lhs($ast, $symbol_name);
             }
+            diag "RE after deletion: /" . re_compiles( $ast ) . "/";
         }
-        my $re = translate( $ast );
-        diag "RE: /$re/";
     } ## for
     warn "after all substitutions:", Dumper $ast;
 }
@@ -478,7 +491,7 @@ for my $test (@$tests){
 
         SKIP: {
 
-            skip "RE doesn't compile", @$input - 1 unless $re_compiles and $must_compile;
+            skip "RE doesn't compile", @$input - 1 unless $must_compile and $re_compiles;
 
             for my $i (0 .. @$input - 1){
 
