@@ -37,8 +37,6 @@ my $tests = [
     ],
 ];
 
-#use Carp::Always;
-
 for my $test (@$tests){
 
     my ($source, $desc) = @$test;

@@ -14,28 +14,22 @@ use Scalar::Util qw{ blessed };
 
 sub new {
     my ($class, $ast) = @_;
-
-#    warn Dumper $ast;
-    my $self = $ast;
-
-    # bless root
-    bless $self, $class;
-    # bless descendants
-    $self->walk( {
-        visit => sub { bless $_[0], $class unless blessed $_[0] }
-    } );
-
-    return $self;
+    return MarpaX::Regex::AST::bless( $ast, $class );
 }
 
-# ast transform needs this
-sub deepcopy{
-    my ($ast) = @_;
-    # absolutize relative references
-    local $Data::Dumper::Purity = 1;
-    local $Data::Dumper::Deepcopy = 1;
-    $ast = eval(Dumper($ast));
+sub MarpaX::Regex::AST::bless{
+
+    my ($ast, $class) = @_;
+
+    # bless root
+    bless $ast, $class;
+    # bless descendants
+    $ast->walk( {
+        visit => sub { CORE::bless $_[0], $class unless blessed $_[0] }
+    } );
+
     return $ast;
+
 }
 
 sub _assert_options{
@@ -77,7 +71,7 @@ sub walk{
 sub do_walk{
     my ($ast, $opts ) = @_;
 
-    $ast = bless [ '#text', $ast ], __PACKAGE__ unless ref $ast;
+    $ast = CORE::bless [ '#text', $ast ], __PACKAGE__ unless ref $ast;
     my ($node_id, @children) = @{ $ast };
 
     $opts->{depth}++ unless exists $opts->{skip}->{$node_id};
@@ -118,6 +112,11 @@ sub sprint{
     $ast->walk( $opts );
 
     return $s;
+}
+
+sub distill{
+    my ($ast, $opts ) = @_;
+    _assert_options( $opts, { } );
 }
 
 =head2 dump()
