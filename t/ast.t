@@ -174,13 +174,15 @@ for my $test (@$tests){
     ok !$@, 'Regex BNF parsed';
 
     my $ast = MarpaX::Regex::AST->new( $value );
-    warn $ast->dump( { indent => 1 } );
+    warn $ast->sprint();
+    next;
+#    warn $ast->dump( { indent => 1 } );
     $ast->walk( {
         visit => sub {
             my ($ast, $context) = @_;
             warn join ( ': ', $context->{depth}, $ast->dump( { indent => 0 } ) );
         },
-        traverse => 'postorder',
+        traversal => 'postorder',
     } );
 
 } ## for my $test (@$tests) ...

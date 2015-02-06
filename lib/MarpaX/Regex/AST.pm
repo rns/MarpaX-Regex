@@ -9,6 +9,8 @@ $Data::Dumper::Indent = 1;
 $Data::Dumper::Terse = 1;
 $Data::Dumper::Deepcopy = 1;
 
+use Carp;
+
 sub new {
     my ($class, $ast) = @_;
     # absolutize relative references
@@ -23,23 +25,77 @@ sub new {
     return $self;
 }
 
-sub ast{ $_[0]->{ast} }
+sub _assert_options{
+    my ($opts, $spec) = @_;
+
+    $spec //= {};
+    my $meth = (caller(1))[3];
+
+    $opts //= 'undef';
+    croak $meth . ": options must be a HASH ref, not $opts." unless ref $opts eq "HASH";
+
+    for my $opt ( sort keys %{ $spec } ){
+        my ($pred, $desc) = @{ $spec->{$opt} };
+        croak $meth . ": '$opt' option required." unless exists $opts->{visit};
+        $opts->{$opt} //= 'undef';
+        croak qq{$meth: $opt option must be a $desc, not $opts->{$opt}}
+            unless $pred->( $opts->{$opt} );
+    }
+
+}
+
+# skip option to filter intermediate nodes
 
 sub walk{
+    my ($ast, $opts ) = @_;
+
+    _assert_options($opts, { visit => [ sub{ ref $_[0] eq "CODE" }, "CODE ref" ] });
+    $opts->{traversal} //= 'preorder';
+
+    return do_walk( $ast, $opts );
+}
+
+sub do_walk{
     my ($ast, $opts ) = @_;
     state $depth++;
     if (ref $ast){
         my ($node_id, @children) = @$ast;
-        $opts->{visit}->( $ast, { depth => $depth } );
-        walk( $_, $opts  ) for @children;
+        if ($opts->{traversal} eq 'postorder'){
+            do_walk( $_, $opts  ) for @children;
+            $opts->{visit}->( $ast, { depth => $depth } );
+        }
+        else{
+            $opts->{visit}->( $ast, { depth => $depth } );
+            do_walk( $_, $opts  ) for @children;
+        }
     }
     $depth--;
 }
 
 sub sprint{
-    my ($ast, %opts ) = @_;
+    my ($ast, $opts ) = @_;
+
     my $s = '';
-    $ast->walk( { } );
+
+    $opts //= { };
+    _assert_options( $opts, { } );
+    $opts->{indent} = '  ';
+
+    # set visitor
+    $opts->{visit} = sub {
+        my ($ast, $context) = @_;
+        my ($node_id, @children) = @$ast;
+        my $indent = $opts->{indent} x ( $context->{depth} - 1 );
+        if (@children == 1 and not ref $children[0]){
+            $s .= qq{$indent $node_id '$children[0]'\n};
+        }
+        else{
+            $s .= qq{$indent $node_id\n};
+        }
+    };
+
+    $ast->walk( $opts );
+
     return $s;
 }
 
