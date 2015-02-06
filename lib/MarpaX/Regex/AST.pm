@@ -77,11 +77,10 @@ sub walk{
 sub do_walk{
     my ($ast, $opts ) = @_;
 
-    $opts->{depth}++;
-
     $ast = bless [ '#text', $ast ], __PACKAGE__ unless ref $ast;
-
     my ($node_id, @children) = @{ $ast };
+
+    $opts->{depth}++ unless exists $opts->{skip}->{$node_id};
 
     unless ($opts->{depth} > $opts->{max_depth} or exists $opts->{skip}->{$node_id} ){
         $opts->{visit}->( $ast, { depth => $opts->{depth} } );
@@ -91,7 +90,7 @@ sub do_walk{
         do_walk( $_, $opts  ) for grep { defined } @children;
     }
 
-    $opts->{depth}--;
+    $opts->{depth}-- unless exists $opts->{skip}->{$node_id};
 }
 
 sub sprint{

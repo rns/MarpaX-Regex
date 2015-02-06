@@ -68,8 +68,8 @@ for my $test (@$tests){
             warn join ( ': ', $context->{depth}, $ast->dump( { Indent => 0 } ) );
         },
 #        traversal => 'preorder',
-#        skip => [ 'symbol name' ],
-#        max_depth => 2,
+        skip => [ 'symbol name' ],
+        max_depth => 6,
     } );
 
 } ## for my $test (@$tests) ...
