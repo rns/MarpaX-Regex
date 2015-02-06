@@ -9,89 +9,7 @@ $Data::Dumper::Indent = 1;
 $Data::Dumper::Terse = 1;
 $Data::Dumper::Deepcopy = 1;
 
-use Marpa::R2;
-
-my $dsl = q{;
-:default ::= action => [ name, values ]
-lexeme default = action => [ name, values ] latm => 1
-
-    statements ::= statement+
-
-    # bottom to top: char, literal, charclass, symbol, grouping/alternation, statement
-    metacharacter       ~ '^' | '$' | '.' | [\\\\]
-    <character escape>  ~ '\d' | '\w'
-
-    # spaces are allowed between ? and +, hence G1 rule
-    quantifier ::= '?' | '*' | '+'
-                 | '?' <quantifier modifier>
-                 | '*' <quantifier modifier>
-                 | '+' <quantifier modifier>
-                 | '{' uint '}'
-                 | '{' uint comma '}'
-                 | '{' uint comma uint '}'
-    <quantifier modifier> ::= '?' | '+'
-
-    uint    ~ [\d]+
-    comma   ~ ','
-
-    literal ::= ( ["] ) <string without double quotes and metacharacters> ( ["] )
-    literal ::= ( ['] ) <string without single quotes and metacharacters> ( ['] )
-    <string without double quotes and metacharacters> ~ [^\^\$"]+ #"
-    <string without single quotes and metacharacters> ~ [^\^\$']+ #'
-
-    <character class> ::= '[' <character class characters> ']'
-    <character class characters> ~ <character class character>+
-    <character class character> ~ [^\]] | '\[' | '\]' | '[:' | ':]'
-
-    # these will be used in named captures so
-    # the rules for regexp NAMEs must be obeyed
-    symbol ::= <symbol name>
-    <symbol name> ::= <bare name>
-    <symbol name> ::= <bracketed name>
-    <bare name> ~ [\w]+
-    <bracketed name> ~ '<' <bracketed name string> '>'
-    <bracketed name string> ~ [\s\.\w]+
-
-    # grouping and alternation
-    primary ::= literal
-              | <character class>
-              | <character class> quantifier
-              | symbol
-              | symbol quantifier
-              | <character escape>
-              | <character escape> quantifier
-              | metacharacter
-# uncomment the below 2 lines to allow empty groups (null regex)
-              | alternation
-    alternation         ~ '|'
-
-    group ::= primary
-            | '(' group ')' quantifier assoc => group
-            | '(' group ')' assoc => group
-           || group group       # and
-# comment out the below line to allow empty groups (null regex)
-#           || group '|' group   # or
-
-    # rules
-    statement           ::= <empty rule> | <alternative rule>
-    <empty rule>        ::= lhs (<op declare bnf>)
-    <alternative rule>  ::= lhs (<op declare bnf>) alternatives
-    lhs                 ::= <symbol name>
-    alternatives        ::= group
-    <op declare bnf> ~ '::='
-
-:discard ~ whitespace
-    whitespace ~ [\s]+
-
-:discard ~ <hash comment>
-    <hash comment> ~ <terminated hash comment> | <unterminated final hash comment>
-    <terminated hash comment> ~ '#' <hash comment body> <vertical space char>
-    <unterminated final hash comment> ~ '#' <hash comment body>
-    <hash comment body> ~ <hash comment char>*
-    <vertical space char> ~ [\x{A}\x{B}\x{C}\x{D}\x{2028}\x{2029}]
-    <hash comment char> ~ [^\x{A}\x{B}\x{C}\x{D}\x{2028}\x{2029}]
-
-};
+use MarpaX::Regex;
 
 # following http://perldoc.perl.org/perlretut.html
 # BNF source, input string, scalar-context match, list-context match, desc
@@ -222,8 +140,6 @@ or written in the compact form,
 
 =cut
 
-my $slg = Marpa::R2::Scanless::G->new( { source  => \$dsl } );
-
 =head2 translate pseudocode
 
     sanity check
@@ -331,19 +247,10 @@ sub delete_statement_by_lhs{
     splice( @{ $ast }, $ix + 1, 1 ) if defined $ix;
 }
 
-sub re_compiles{
-    my ($ast) = @_;
-    my $re = translate( $ast );
-    eval { qr/$re/x };
-    warn "compile failure: $@!" if $@;
-    return $re;
-}
-
 sub substitute {
     my ($ast) = @_;
 
     local $Data::Dumper::Indent = 0;
-    diag "RE before substitute(): /" . re_compiles( $ast ) . "/";
 
 SUBSTITUTE:
     for my $subst_iter (0..10){
@@ -383,7 +290,6 @@ SUBSTITUTE:
 #                    "if there are references to it from other rules (unlike <optional sign>, which should be deleted)";
                 # this doesn't work for digit group
                 $p->[1]->[1] = $group;
-                diag "RE after substitution: /" . re_compiles( $ast ) . "/";
             }
     #        local $Data::Dumper::Indent = 1;
             warn "after substitution:", Dumper $ast;
@@ -392,7 +298,6 @@ SUBSTITUTE:
                 warn "$symbol_name is inaccessible, deleting";
                 delete_statement_by_lhs($ast, $symbol_name);
             }
-            diag "RE after deletion: /" . re_compiles( $ast ) . "/";
         }
     } ## for
     warn "after all substitutions:", Dumper $ast;
@@ -411,31 +316,6 @@ but their statements not removed
 
 =cut
 
-sub translate{
-    my ($ast) = @_;
-    state $depth++;
-    my $s;
-    my $indent = "  " x ($depth - 1);
-    if (ref $ast){
-        my ($node_id, @children) = @$ast;
-        if ($node_id eq 'statement'){
-#            warn Dumper $node_id, \@children;
-            my $lhs = $children[0]->[1]->[1]->[1]->[1];
-#            warn "lhs: ", Dumper $lhs;
-#            warn "# $lhs alternatives:\n", Dumper $children[0]->[2]->[1];
-            $s .= "(?#$lhs)" . "(?:" . join('', map { translate( $_ ) } $children[0]->[2] ) . ")";
-        }
-        else{
-            $s .= join '', map { translate( $_ ) } @children;
-        }
-    }
-    else{
-        $s .= $ast;
-    }
-    $depth--;
-    return $s;
-}
-
 for my $test (@$tests){
 
     my ($source, $input, $expected_scalar, $expected_list, $desc) = @$test;
@@ -451,7 +331,8 @@ for my $test (@$tests){
     diag "BNF: $source";
 
     # must parse unambiguously unless parse error is expected
-    my $ast = eval { ${ $slg->parse(\$source) } };
+    my $rex = MarpaX::Regex->new;
+    my $ast = eval { $rex->parse($source) };
     if ($must_parse){
         ok !$@, 'BNF parsed';
     }
@@ -461,11 +342,7 @@ for my $test (@$tests){
 
     # reparse with trace_terminals and progress unless parse error expected
     if ($@ and $must_parse){
-        my $slr = Marpa::R2::Scanless::R->new( {
-            grammar => $slg,
-            trace_terminals => 1,
-        } );
-        eval { $slr->read(\$source) } || warn "$@\nProgress report is:\n" . $slr->show_progress;
+        my $slr = $rex->parse_debug($source);
         if ( $slr->ambiguity_metric() >= 2 ){
             diag "BNF parse is ambiguous:\n", $slr->ambiguous();
             # count or list parses here?
@@ -481,8 +358,8 @@ for my $test (@$tests){
         skip "BNF source parse error", 3 unless defined $ast and $must_parse;
 
 #        $ast = eval(Dumper( $ast )); # we need data, not refs
-        substitute($ast);
-        my $re = translate( $ast );
+        substitute( $ast );
+        my $re = $rex->translate( $ast );
         diag "RE: /$re/";
 
         my $re_compiles;

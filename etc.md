@@ -15,7 +15,14 @@ Syntax
   
 Priorities
 ----------
-  
+
+ast cleanup  
+  collapse intermediate ast nodes
+    ['symbol',['symbol name',['bare name','digit']]]
+    ['symbol',['symbol name','digit']]
+    ['symbol', 'digit' ]
+  unwind recursion to arrays
+        
   substitution
 
   escaped metacharacters in literals
