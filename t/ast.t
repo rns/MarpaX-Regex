@@ -11,6 +11,35 @@ $Data::Dumper::Terse = 1;
 use MarpaX::Regex;
 use MarpaX::Regex::AST;
 
+=head2 todos:
+
+    distill (produce new MarpaX::(Regex::)AST tree with skip => \@nodes skipped
+
+        'skip' must affect named literals, e.g.
+        collapse name/literal axis by pruning intermediate nodes up to named literal, e.g.
+            ['symbol',['symbol name',['bare name','digit']]]
+        prune('symbol', 'bare name') => ['symbol', 'digit' ]
+
+        unwind recursion to arrays
+
+    predicates (child, descendant, sibling)
+
+    start/length -- (un)pack node to hash ref according to
+        { key => index } mapping passed as an option, e.g.
+        { name => 0, start => 1, length => 2, value => 3 }
+            for
+                [ name, start, length, value ]
+
+    block vs. span (increasing/non-increasing depth) in sprint
+
+    handlers
+
+    is ast manipulation even possible without deepcopy?
+        cut, paste, copy
+        filter
+
+=cut
+
 # following http://perldoc.perl.org/perlretut.html
 # Regex BNF source, input string, scalar-context match, list-context match, desc
 my $tests = [
@@ -52,7 +81,9 @@ for my $test (@$tests){
     my $ast = MarpaX::Regex::AST->new( $value );
 #    warn $ast->dump( { Indent => 1, Deepcopy => 1 } );
     warn $ast->sprint( {
-        skip => [ 'group', 'primary', 'alternative rule', 'symbol name', 'character class', 'literal', 'symbol' ],
+        skip => [ 'group', 'primary',
+            'alternative rule', 'symbol name', 'character class', 'literal', 'symbol'
+        ],
 #        max_depth => 6,
     } );
 #    warn $ast->sprint( { max_depth => 8 } );
