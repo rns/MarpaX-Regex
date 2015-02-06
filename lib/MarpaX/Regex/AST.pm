@@ -5,24 +5,37 @@ use strict;
 use warnings;
 
 use Data::Dumper;
-$Data::Dumper::Indent = 1;
-$Data::Dumper::Terse = 1;
-$Data::Dumper::Deepcopy = 1;
+local $Data::Dumper::Indent = 1;
+local $Data::Dumper::Terse = 1;
+local $Data::Dumper::Purity = 0;
 
 use Carp;
+use Scalar::Util qw{ blessed };
 
 sub new {
     my ($class, $ast) = @_;
-    # absolutize relative references
-    local $Data::Dumper::Purity = 0;
-    local $Data::Dumper::Indent = 0;
-    local $Data::Dumper::Terse  = 1;
-    my $self = eval(Dumper($ast));
+
+#    warn Dumper $ast;
+    my $self = $ast;
+
     # bless root
     bless $self, $class;
     # bless descendants
-    $self->walk( { visit => sub { bless $_[0], $class } } );
+    $self->walk( {
+        visit => sub { bless $_[0], $class unless blessed $_[0] }
+    } );
+
     return $self;
+}
+
+# ast transform needs this
+sub deepcopy{
+    my ($ast) = @_;
+    # absolutize relative references
+    local $Data::Dumper::Purity = 1;
+    local $Data::Dumper::Deepcopy = 1;
+    $ast = eval(Dumper($ast));
+    return $ast;
 }
 
 sub _assert_options{
@@ -49,27 +62,36 @@ sub _assert_options{
 sub walk{
     my ($ast, $opts ) = @_;
 
-    _assert_options($opts, { visit => [ sub{ ref $_[0] eq "CODE" }, "CODE ref" ] });
+    _assert_options($opts, {
+        visit => [ sub{ ref $_[0] eq "CODE" }, "CODE ref" ]
+    });
     $opts->{traversal} //= 'preorder';
+    $opts->{max_depth} //= 1_000_000;
+    $opts->{skip} //= [];
+    $opts->{skip} = { map { $_ => 1 } @{ $opts->{skip} } };
+    $opts->{depth} = 0;
 
     return do_walk( $ast, $opts );
 }
 
 sub do_walk{
     my ($ast, $opts ) = @_;
-    state $depth++;
-    if (ref $ast){
-        my ($node_id, @children) = @$ast;
-        if ($opts->{traversal} eq 'postorder'){
-            do_walk( $_, $opts  ) for @children;
-            $opts->{visit}->( $ast, { depth => $depth } );
-        }
-        else{
-            $opts->{visit}->( $ast, { depth => $depth } );
-            do_walk( $_, $opts  ) for @children;
-        }
+
+    $opts->{depth}++;
+
+    $ast = bless [ '#text', $ast ], __PACKAGE__ unless ref $ast;
+
+    my ($node_id, @children) = @{ $ast };
+
+    unless ($opts->{depth} > $opts->{max_depth} or exists $opts->{skip}->{$node_id} ){
+        $opts->{visit}->( $ast, { depth => $opts->{depth} } );
     }
-    $depth--;
+
+    unless (@children == 1 and not ref $children[0]){ # [ literal name, literal value ]
+        do_walk( $_, $opts  ) for grep { defined } @children;
+    }
+
+    $opts->{depth}--;
 }
 
 sub sprint{
@@ -99,31 +121,18 @@ sub sprint{
     return $s;
 }
 
+=head2 dump()
+    This method returns Data::Dumper::Dumper($ast) setting local Data::Dumper options
+=cut
 sub dump{
     my ($ast, $opts ) = @_;
-    if (exists $opts->{indent}){
-        local $Data::Dumper::Indent = $opts->{indent};
-        return Dumper $ast;
-    }
+    $opts->{Indent} //= $Data::Dumper::Indent;
+    $opts->{Deepcopy} //= $Data::Dumper::Deepcopy;
+    $opts->{Terse} //= $Data::Dumper::Terse;
+    local $Data::Dumper::Indent = $opts->{Indent};
+    local $Data::Dumper::Deepcopy = $opts->{Deepcopy};
+    local $Data::Dumper::Terse = $opts->{Terse};
     return Dumper $ast;
-}
-
-sub ast_find{
-    my ($ast, $code ) = @_;
-    my $found = [];
-    sub find{
-        my ($node, $code, $found) = @_;
-        if (ref $node){
-            my ($node_id, @children) = @$node;
-            if ( $code->($node) ){
-                local $Data::Dumper::Indent = 0;
-                push @$found, $node;
-            }
-            find ($_, $code, $found) for reverse @children;
-        }
-    }
-    find($ast, $code, $found);
-    return $found;
 }
 
 1;
