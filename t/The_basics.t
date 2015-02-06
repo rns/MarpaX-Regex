@@ -12,7 +12,7 @@ $Data::Dumper::Deepcopy = 1;
 use MarpaX::Regex;
 
 # following http://perldoc.perl.org/perlretut.html
-# BNF source, input string, scalar-context match, list-context match, desc
+# Regex BNF source, input string, scalar-context match, list-context match, desc
 my $tests = [
     # mustn't parse
     [ q{ s ::= [] }, 'hello world', 1, [ 1 ], 'empty character class, BNF parse error expected' ],
@@ -137,28 +137,6 @@ my $tests = [
 or written in the compact form,
 
     /^[+-]?\ *(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/;
-
-=cut
-
-=head2 translate pseudocode
-
-    sanity check
-        merge statements with the same lhs, like
-            lhs ::= rhs1
-            lhs ::= rhs2
-        to a group under the lhs
-            lhs ::= rhs1 '|' rhs2
-        by joing the groups with [ 'group', [ 'primary', [ 'alternation', '|' ] ] ]
-
-    until there is no symbols to replace
-        find terminals (rules without symbols)
-        replace all occurrences terminal symbols in non-terminals with the contents of terminals
-    if there are symbols, but there is no terminals to replace them, warn
-    concatenate ast
-
-    terminal rules      -- RHS has no symbols
-    non-terminals rules -- RHS has at least one symbol
-        -- enforce those rules in the grammar?
 
 =cut
 
@@ -303,19 +281,6 @@ SUBSTITUTE:
     warn "after all substitutions:", Dumper $ast;
 }
 
-=pod
-
-source ast
-
-# RE: /(?#number)(?:^<optional sign>(<f.p. mantissa>|integer)<optional exponent>$)(?#<optional sign>)(?:[+-]?)(?#<f.p. mantissa>)(?:integer.integer|integer.)(?#<f.p. mantissa>)(?:.integer)(?#integer)(?:integer)(?#<optional exponent>)(?:([eE][+-]?integer)?)(?#integer)(?:digit+)(?#digit)(?:\d)/
-
-ast with <optional sign> and digit substituted
-but their statements not removed
-
-# RE: /(?#number)(?:^[+-]?(<f.p. mantissa>|integer)<optional exponent>$)(?#<optional sign>)(?:[+-]?)(?#<f.p. mantissa>)(?:integer.integer|integer.)(?#<f.p. mantissa>)(?:.integer)(?#integer)(?:integer)(?#<optional exponent>)(?:([eE][+-]?integer)?)(?#integer)(?:\d+)(?#digit)(?:\d)/
-
-=cut
-
 for my $test (@$tests){
 
     my ($source, $input, $expected_scalar, $expected_list, $desc) = @$test;
@@ -342,15 +307,7 @@ for my $test (@$tests){
 
     # reparse with trace_terminals and progress unless parse error expected
     if ($@ and $must_parse){
-        my $slr = $rex->parse_debug($source);
-        if ( $slr->ambiguity_metric() >= 2 ){
-            diag "BNF parse is ambiguous:\n", $slr->ambiguous();
-            # count or list parses here?
-        }
-        else{
-            my $value_ref = $slr->value();
-            diag "Parse failed, but there is this value:\n", Dumper ${ $value_ref } if defined $value_ref;
-        }
+        diag $rex->parse_debug($source);
     }
 
     SKIP: {

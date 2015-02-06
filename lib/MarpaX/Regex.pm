@@ -6,8 +6,9 @@ use warnings;
 
 use Marpa::R2;
 use Data::Dumper;
-$Data::Dumper::Indent = 0;
+$Data::Dumper::Indent = 1;
 $Data::Dumper::Terse = 1;
+$Data::Dumper::Deepcopy = 1;
 
 my $dsl = q{;
 :default ::= action => [ name, values ]
@@ -108,6 +109,27 @@ sub parse{
     return ${ $self->{slg}->parse( \$source ) };
 }
 
+=head2 translate pseudocode
+
+    sanity check
+        merge statements with the same lhs, like
+            lhs ::= rhs1
+            lhs ::= rhs2
+        to a group under the lhs
+            lhs ::= rhs1 '|' rhs2
+        by joing the groups with [ 'group', [ 'primary', [ 'alternation', '|' ] ] ]
+
+    until there is no symbols to replace
+        find terminals (rules without symbols)
+        replace all occurrences terminal symbols in non-terminals with the contents of terminals
+    if there are symbols, but there is no terminals to replace them, warn
+    concatenate ast
+
+    terminal rules      -- RHS has no symbols
+    non-terminals rules -- RHS has at least one symbol
+        -- enforce those rules in the grammar?
+
+=cut
 sub translate{
     my ($self, $ast) = @_;
     state $depth++;
@@ -141,21 +163,14 @@ sub parse_debug{
         trace_terminals => 1,
     } );
     eval { $slr->read(\$source) } || warn "$@\nProgress report is:\n" . $slr->show_progress;
-    return $slr;
-}
 
-sub walk_ast {
-    my ( $ast, $callback ) = @_;
-
-#    warn "walk_ast: ", Dumper $ast;
-
-    if (ref $ast){
-        my ($start, $length, $id, @nodes) = @$ast;
-        $callback->($id, @nodes);
-        return map { walk_ast($_, $callback) } @nodes;
+    if ( $slr->ambiguity_metric() >= 2 ){
+        return "BNF parse is ambiguous:\n" . $slr->ambiguous();
+        # count or list parses here?
     }
     else{
-        $callback->($ast);
+        my $value_ref = $slr->value();
+        return "Parse failed, but there is this value:\n" . Dumper ${ $value_ref } if defined $value_ref;
     }
 }
 
