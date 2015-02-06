@@ -13,6 +13,8 @@ use MarpaX::Regex::AST;
 
 =head2 todos:
 
+    predicates (child, descendant, sibling)
+
     distill (produce new MarpaX::(Regex::)AST tree with skip => \@nodes skipped
 
         'skip' must affect named literals, e.g.
@@ -21,8 +23,6 @@ use MarpaX::Regex::AST;
         prune('symbol', 'bare name') => ['symbol', 'digit' ]
 
         unwind recursion to arrays
-
-    predicates (child, descendant, sibling)
 
     start/length -- (un)pack node to hash ref according to
         { key => index } mapping passed as an option, e.g.
