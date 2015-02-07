@@ -43,7 +43,7 @@ sub _assert_options{
 
     for my $opt ( sort keys %{ $spec } ){
         my ($pred, $desc) = @{ $spec->{$opt} };
-        croak $meth . ": '$opt' option required." unless exists $opts->{visit};
+        croak $meth . ": '$opt' option required." unless exists $opts->{$opt};
         $opts->{$opt} //= 'undef';
         croak qq{$meth: $opt option must be a $desc, not $opts->{$opt}}
             unless $pred->( $opts->{$opt} );
@@ -116,7 +116,11 @@ sub sprint{
 
 sub distill{
     my ($ast, $opts ) = @_;
-    _assert_options( $opts, { } );
+
+    _assert_options( $opts, {
+            skip => [ sub{ ref $_[0] eq "ARRAY" }, "ARRAY ref" ]
+    } );
+
 }
 
 =head2 dump()

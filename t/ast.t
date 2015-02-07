@@ -89,18 +89,29 @@ for my $test (@$tests){
 #    warn $ast->sprint( { max_depth => 8 } );
 #    warn $ast->dump( { Indent => 1, Deepcopy => 1 } );
 #    next;
+
     $ast->walk( {
         visit => sub {
             my ($ast, $context) = @_;
+
             local $Data::Dumper::Indent = 0;
             local $Data::Dumper::Deepcopy = 0;
-            warn join ( ': ', $context->{depth}, $ast->dump( { Indent => 0 } ) );
+#            warn join ( ': ', $context->{depth}, $ast->dump( { Indent => 0 } ) );
+
         },
 #        traversal => 'preorder',
         skip => [ 'symbol name' ],
         max_depth => 6,
     } );
 
+    warn Dumper $ast->distill({
+        skip => [
+            'group', 'primary',
+            'alternative rule',
+            'symbol', 'symbol name',
+            'character class', 'literal',
+        ],
+    });
 } ## for my $test (@$tests) ...
 
 done_testing();
