@@ -115,12 +115,50 @@ sub sprint{
 }
 
 sub distill{
-    my ($ast, $opts ) = @_;
+    my ($ast) = @_;
 
-    _assert_options( $opts, {
-            skip => [ sub{ ref $_[0] eq "ARRAY" }, "ARRAY ref" ]
-    } );
+    my $parent = [];
+    my $parent_id;
+    my @parent_children;
 
+    my $opts = {
+        skip => [
+            'group', 'primary',
+            'alternative rule',
+            'symbol', 'symbol name',
+            'character class', 'literal',
+        ],
+        visit => sub {
+            my ($ast, $context) = @_;
+            my ($node_id, @children) = @$ast;
+            if ($node_id eq 'statements'){
+                $parent_id = $node_id;
+            }
+            elsif ($node_id eq 'statement'){
+                warn qq{child: $node_id of parent: $parent_id};
+                $parent_id = $node_id;
+            }
+            elsif ($node_id eq 'lhs'){
+                warn qq{child: $node_id of parent: $parent_id};
+                $parent_id = $node_id;
+            }
+            elsif ($node_id eq 'alternatives'){
+                warn qq{child: $node_id of parent: $parent_id};
+                $parent_id = $node_id;
+            }
+            elsif (@children == 1 and not ref $children[0]){
+                $node_id = 'symbol' if $node_id eq 'bare name';
+                warn qq{child: $node_id: $children[0] of parent: $parent_id};
+            }
+            else{
+                warn "unknown node type: $node_id", Dumper $ast;
+            }
+        }
+    }; ## opts
+
+    $ast->walk( $opts );
+
+    return $parent;
 }
 
 =head2 dump()

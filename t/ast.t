@@ -104,14 +104,8 @@ for my $test (@$tests){
         max_depth => 6,
     } );
 
-    warn Dumper $ast->distill({
-        skip => [
-            'group', 'primary',
-            'alternative rule',
-            'symbol', 'symbol name',
-            'character class', 'literal',
-        ],
-    });
+    warn Dumper $ast->distill;
+
 } ## for my $test (@$tests) ...
 
 done_testing();
