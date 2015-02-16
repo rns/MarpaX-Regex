@@ -93,8 +93,12 @@ my $tests = [
          integer             ::= digit+             # integer of the form a
          <optional exponent> ::= ([eE][+-]?\d+)?
          digit               ::= \d
-        }, '1.3', 1, '1.3', 'building a regexp, unfactored form' ],
+        }, '1.3', 1, [ [ '', '1.3', '', undef ] ], 'building a regexp, unfactored form' ],
 ];
+
+
+
+
 
 =pod more tests
 
@@ -198,10 +202,12 @@ for my $test (@$tests){
                 is $got, $exp_scalar, "$desc: scalar-context match";
 
                 my @got = $in =~ /$re/x;
+#                @got = grep { defined and $_ } @got;
                 # compare to empty array if no match in list context
                 $exp_list = [] if not defined $exp_list;
                 # compare to single-item array if matched in list context
                 $exp_list = [ $exp_list ] unless ref $exp_list;
+                warn Dumper \@got, $exp_list;
                 is_deeply \@got, $exp_list, "$desc: list-context match";
 
             } ## for $input ...

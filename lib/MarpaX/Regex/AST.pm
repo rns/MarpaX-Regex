@@ -335,22 +335,28 @@ sub terminals{
     return @terminals > 0 ? \@terminals : undef;
 }
 
-# delete terminal statements, whose lhs is not in the alternatives of any other statement
-sub delete_unproductive_terminals{
-    my ($ast, $terminals) = @_;
-}
-
 # replace occurrences of terminal's name with terminal's alternatives
 sub replace_terminals{
     my ($ast, $terminals) = @_;
 
+    my %terminals;
+    for my $t (@$terminals){
+        my $t_lhs = $t->first_child->first_child->first_child;
+        my $t_alternatives = $t->child(1)->children;
+#        warn Dumper $t_alternatives;
+#        warn "# replacing $t_lhs:\n", $t->sprint;
+        $terminals{$t_lhs} = $t_alternatives;
+    }
+
+    # terminal must be deleted if it's been used in replacement at least once
+    my $deletable_terminals = {};
     my $opts = {
         visit => sub {
             my ($ast, $context) = @_;
             if ($ast->id eq 'statement'){
                 my $lhs = $ast->[1]->[1]->[1];
 #                    warn "#stat $lhs: ", $ast->sprint;
-                return if exists $terminals->{ $lhs }; # don't replace itself
+                return if exists $terminals{ $lhs }; # don't replace itself
                 my $alternatives = $ast->child(1)->children;
                 # in reverse order to replace from the end
                 for (my $ix = @$alternatives - 1; $ix >= 0; $ix--){
@@ -359,9 +365,10 @@ sub replace_terminals{
 #                    warn $id;
                     if ($id eq 'bare name' or $id eq 'bracketed name'){
                         my $symbol = $alternative->first_child();
-                        if (exists $terminals->{ $symbol } ){
+                        if (exists $terminals{ $symbol } ){
 #                            warn "# $ix-th child '$symbol' needs replacing:\n", $ast->[2]->[$ix+1]->sprint;
-                            splice(@{ $ast->[2] }, $ix+1, 1, @{ $terminals->{ $symbol } });
+                            splice(@{ $ast->[2] }, $ix+1, 1, @{ $terminals{ $symbol } });
+                            $deletable_terminals->{ $symbol }++;
                         }
                     }
                 }
@@ -373,6 +380,29 @@ sub replace_terminals{
         }
     }; ## opts
     $ast->walk( $opts );
+
+    # delete terminals statements we've just replaced
+    $opts = {
+        visit => sub {
+            my ($ast, $context) = @_;
+            my ($node_id, @children) = @$ast;
+            if ($node_id eq 'statements'){
+#                warn "# checking for deletion stats:\n", Dumper $ast;
+                my @new_children;
+                # todo: check why grep { defined } is needed
+                for my $statement (grep { defined } @children){
+#                    warn "# checking for deletion stat:\n", $statement->sprint;
+                    next if exists $deletable_terminals->{ $statement->first_child->first_child->first_child };
+#                    warn "# kept";
+                    push @new_children, $statement;
+                }
+                $ast->children(\@new_children);
+            }
+        }
+    }; ## opts
+    $ast->walk( $opts );
+
+    return %$deletable_terminals ? 1 : 0;
 }
 
 # substitute named terminal nodes contents instead of name occurrencs
@@ -382,28 +412,14 @@ sub substitute{
 
     $ast->merge();
 
-    warn "# with NO terminals replaced:\n", $ast->sprint;
-#    while (my $terminals = $ast->terminals()){
-    my $terminals = $ast->terminals();
+#    warn "# with NO terminals replaced:\n", $ast->sprint;
 
-    my %terminals;
-    for my $t (@$terminals){
-        my $t_lhs = $t->first_child->first_child->first_child;
-        my $t_alternatives = $t->child(1)->children;
-#        warn Dumper $t_alternatives;
-#        warn "# replacing $t_lhs:\n", $t->sprint;
-        $terminals{$t_lhs} = $t_alternatives;
+    while (1){
+        my $terminals = $ast->terminals();
+    #    warn $_->sprint for @$terminals;
+        last if not $ast->replace_terminals($terminals);
+#        warn "# with terminals replaced:\n", $ast->sprint;
     }
-
-#    warn $_->sprint for @$terminals;
-    $ast->replace_terminals(\%terminals);
-#    }
-    warn "# with terminals replaced:\n", $ast->sprint;
-
-    # while (find_terminals()) {
-    #   substitute occurrence of terminal names with their contents
-    #   remove inaccessible terminals
-    # }
 
     return $ast;
 }
