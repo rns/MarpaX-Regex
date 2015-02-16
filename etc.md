@@ -4,7 +4,13 @@
 improve build- and read-ability
   define names for metacharacters and character escapes
   
-move to Marpa::R2 for long strings and/or hard regexes
+compile to Marpa::R2 for long strings and/or hard regexes
+  external lexing
+  lexemes
+    literals, charclasses and symbolless groups
+  expand the brackets by rewriting the grammar to EBNF -> BNF
+    to prioritized rules to handle associativity and precedence?
+    MarpaX::Regex grammar as a template
 
 Syntax
 ------    
@@ -16,6 +22,11 @@ Syntax
 Priorities
 ----------
 
+    explicit non-capturing parens (?: ...)
+      others?
+    bracketed symbols <>
+    bareword literals
+  
   substitution
 
   escaped metacharacters in literals
