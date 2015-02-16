@@ -3,7 +3,9 @@
 
 improve build- and read-ability
   define names for metacharacters and character escapes
-  
+  take your regex and modularize it
+    needs full regex parser
+    
 compile to Marpa::R2 for long strings and/or hard regexes
   external lexing
   lexemes
