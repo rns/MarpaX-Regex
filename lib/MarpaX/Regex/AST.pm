@@ -140,7 +140,8 @@ sub distill{
     my $parent;
     my $statement;
     my $parent_id;
-    my $children;
+
+    local $Data::Dumper::Indent = 0;
 
     my $opts = {
         skip => [
@@ -158,19 +159,19 @@ sub distill{
                 $parent = $root;
             }
             elsif ($node_id eq 'statement'){
-                warn qq{child: $node_id of parent: $parent_id};
+#                warn qq{child: $node_id of parent: $parent_id};
                 $parent_id = $node_id;
                 $statement = $root->last_child( MarpaX::Regex::AST->new( $node_id ) );
 #                warn "# parent of $node_id\n", Dumper $parent;
             }
             elsif ($node_id eq 'lhs'){
-                warn qq{child: $node_id of parent: $parent_id};
+#                warn qq{child: $node_id of parent: $parent_id};
                 $parent_id = $node_id;
                 $parent = $statement->last_child( MarpaX::Regex::AST->new( $node_id ) );
 #                warn "# parent of $node_id\n", Dumper $parent;
             }
             elsif ($node_id eq 'alternatives'){
-                warn qq{child: $node_id of parent: $parent_id};
+#                warn qq{child: $node_id of parent: $parent_id};
                 $parent_id = $node_id;
                 $parent = $statement->last_child( MarpaX::Regex::AST->new( $node_id ) );
 #                warn "# parent of $node_id\n", Dumper $parent;
