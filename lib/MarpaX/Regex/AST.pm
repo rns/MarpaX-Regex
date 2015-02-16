@@ -171,6 +171,38 @@ sub concat{
     return $s . "\n";
 }
 
+# substitute named terminal nodes contents instead of name occurrencs
+# and delete named terminal nodes if they become inaccessible
+sub substitute{
+    my ($ast) = @_;
+
+    # merge statement nodes having the same lhs with alternation '|'
+    #   gather all statements having the same lhs
+    #   remove them
+    #   add new statement, which joins them as alternatives
+    my $same_lhs = {};
+    my $opts = {
+        skip => [
+            'group', 'primary',
+            'alternative rule',
+            'symbol', 'symbol name',
+            'character class', 'literal',
+        ],
+        visit => sub {
+            my ($ast, $context) = @_;
+            my ($node_id, @children) = @$ast;
+
+        }
+    }; ## opts
+
+    # while (find_terminals()) {
+    #   substitute occurrence of terminal names with their contents
+    #   remove inaccessible terminals
+    # }
+
+    return $ast;
+}
+
 sub distill{
     my ($ast) = @_;
 

@@ -198,6 +198,8 @@ for my $test (@$tests){
 
     eq_or_diff $distilled_ast_str, $skip_ast_str, "distill(), $desc";
 
+    $distilled_ast->substitute();
+
     warn $distilled_ast->concat();
 
 } ## for my $test (@$tests) ...
