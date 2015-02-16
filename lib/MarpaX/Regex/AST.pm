@@ -298,28 +298,26 @@ sub merge{
 sub terminals{
     my ($ast) = @_;
 
+    my %symbol_name = map { $_ => 1 } ('bare name', 'bracketed name');
+    my @terminals;
     my $opts = {
         skip => sub {
             my ($ast, $context) = @_;
-            my ($node_id, @children) = @$ast;
-            # terminal statements must have no symbol name or bracketed name
-            # alternatives
-            if ($node_id eq 'statement'){
-                my $alternatives = $children[1];
-                warn "# terminals: alternatives:\n", $alternatives->sprint;
-            }
-
+            # terminal is a statement ...
+            return 1 unless $ast->id eq 'statement';
+            # having no symbol name or bracketed name alternatives
+            my @symbols = grep { exists $symbol_name{$_->id()} }
+                    @{ $ast->child(1)->children() };
+            return @symbols > 0; # skip non-terminals
         },
         visit => sub {
             my ($ast, $context) = @_;
-            my ($node_id, @children) = @$ast;
-
+            push @terminals, $ast;
         }
     }; ## opts
-
     $ast->walk( $opts );
 
-    return $ast;
+    return \@terminals;
 }
 
 # substitute named terminal nodes contents instead of name occurrencs
@@ -329,7 +327,8 @@ sub substitute{
 
     $ast->merge();
 
-    $ast->terminals();
+    my $terminals = $ast->terminals();
+    warn $_->sprint for @$terminals;
 
     # while (find_terminals()) {
     #   substitute occurrence of terminal names with their contents
