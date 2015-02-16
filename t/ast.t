@@ -44,34 +44,133 @@ use MarpaX::Regex::AST;
 # following http://perldoc.perl.org/perlretut.html
 # Regex BNF source, input string, scalar-context match, list-context match, desc
 my $tests = [
-    # Building a regexp
-    [ q{
-         s ::= ( nineteen | twenty | ) \d\d
-         nineteen ::= '19'
-         twenty   ::= '20'
-      },
-      'grouping, years'
-    ],
-    # /^[+-]?(\d+\.\d+|\d+\.|\.\d+|\d+)([eE][+-]?\d+)?$/
-    [ q{
-         number              ::= ^ (<optional sign>) (<f.p. mantissa> | integer) (<optional exponent>) $
-         <optional sign>     ::= [+-]?
-         <f.p. mantissa>     ::= digit+ '.' digit+  # mantissa of the form a.b
-                               | digit+ '.'         # mantissa of the form a.
-         <f.p. mantissa>     ::= '.' digit+         # mantissa of the form .b
-         integer             ::= digit+             # integer of the form a
-         <optional exponent> ::= ([eE][+-]?\d+)?
-         digit               ::= \d
-      },
-      'building a regexp, unfactored form'
-    ],
+# Building a regexp
+[ q{
+    s ::= ( nineteen | twenty | ) \d\d
+    nineteen ::= '19'
+    twenty   ::= '20'
+},
+q{
+ statements
+   statement
+     lhs
+       bare name 's'
+     alternatives
+       #text '('
+       bare name 'nineteen'
+       alternation '|'
+       bare name 'twenty'
+       alternation '|'
+       #text ')'
+       character escape '\d'
+       character escape '\d'
+   statement
+     lhs
+       bare name 'nineteen'
+     alternatives
+       string without single quotes and metacharacters '19'
+   statement
+     lhs
+       bare name 'twenty'
+     alternatives
+       string without single quotes and metacharacters '20'
+},
+'grouping, years' ],
+# /^[+-]?(\d+\.\d+|\d+\.|\.\d+|\d+)([eE][+-]?\d+)?$/
+[ q{
+    number              ::= ^ (<optional sign>) (<f.p. mantissa> | integer) (<optional exponent>) $
+    <optional sign>     ::= [+-]?
+    <f.p. mantissa>     ::= digit+ '.' digit+  # mantissa of the form a.b
+                          | digit+ '.'         # mantissa of the form a.
+    <f.p. mantissa>     ::= '.' digit+         # mantissa of the form .b
+    integer             ::= digit+             # integer of the form a
+    <optional exponent> ::= ([eE][+-]?\d+)?
+    digit               ::= \d
+},
+q{
+ statements
+   statement
+     lhs
+       bare name 'number'
+     alternatives
+       metacharacter '^'
+       #text '('
+       bracketed name '<optional sign>'
+       #text ')'
+       #text '('
+       bracketed name '<f.p. mantissa>'
+       alternation '|'
+       bare name 'integer'
+       #text ')'
+       #text '('
+       bracketed name '<optional exponent>'
+       #text ')'
+       metacharacter '$'
+   statement
+     lhs
+       bracketed name '<optional sign>'
+     alternatives
+       #text '['
+       character class characters '+-'
+       #text ']'
+       quantifier '?'
+   statement
+     lhs
+       bracketed name '<f.p. mantissa>'
+     alternatives
+       bare name 'digit'
+       quantifier '+'
+       string without single quotes and metacharacters '.'
+       bare name 'digit'
+       quantifier '+'
+       alternation '|'
+       bare name 'digit'
+       quantifier '+'
+       string without single quotes and metacharacters '.'
+   statement
+     lhs
+       bracketed name '<f.p. mantissa>'
+     alternatives
+       string without single quotes and metacharacters '.'
+       bare name 'digit'
+       quantifier '+'
+   statement
+     lhs
+       bare name 'integer'
+     alternatives
+       bare name 'digit'
+       quantifier '+'
+   statement
+     lhs
+       bracketed name '<optional exponent>'
+     alternatives
+       #text '('
+       #text '['
+       character class characters 'eE'
+       #text ']'
+       #text '['
+       character class characters '+-'
+       #text ']'
+       quantifier '?'
+       character escape '\d'
+       quantifier '+'
+       #text ')'
+       quantifier '?'
+   statement
+     lhs
+       bare name 'digit'
+     alternatives
+       character escape '\d'
+},
+'building a regexp, unfactored form' ],
 ];
 
 for my $test (@$tests){
 
-    my ($source, $desc) = @$test;
+    my ($source, $ast_str, $desc) = @$test;
 
     $source =~ s/^\s+|\s+$//g;
+    $ast_str =~ s/^\n+//g;
     diag "Regex BNF: $source";
 
     # must parse unambiguously unless parse error is expected
@@ -81,43 +180,7 @@ for my $test (@$tests){
 
     my $ast = MarpaX::Regex::AST->new( $value );
 
-=pod debug code
-
-#    warn $ast->dump( { Indent => 1, Deepcopy => 1 } );
-    warn $ast->sprint( {
-        skip => [ 'group', 'primary',
-            'alternative rule', 'symbol name', 'character class', 'literal', 'symbol'
-        ],
-#        max_depth => 6,
-    } );
-#    warn $ast->sprint( { max_depth => 8 } );
-#    warn $ast->dump( { Indent => 1, Deepcopy => 1 } );
-#    next;
-
-    $ast->walk( {
-        visit => sub {
-            my ($ast, $context) = @_;
-
-            local $Data::Dumper::Indent = 0;
-            local $Data::Dumper::Deepcopy = 0;
-#            warn join ( ': ', $context->{depth}, $ast->dump( { Indent => 0 } ) );
-
-        },
-#        traversal => 'preorder',
-        skip => [ 'symbol name' ],
-        max_depth => 6,
-    } );
-
-$ast->sprint( {
-        skip => [ 'group', 'primary',
-            'alternative rule', 'symbol name', 'character class', 'literal', 'symbol'
-        ],
-#        max_depth => 6,
-    } );
-
-=cut
-
-    my $expected_distilled = $ast->sprint( {
+    my $skip_ast_str = $ast->sprint( {
         skip => [
             'group', 'primary',
             'alternative rule',
@@ -126,12 +189,14 @@ $ast->sprint( {
         ]
     } );
 
-    my $distilled = $ast->distill;
+    eq_or_diff $skip_ast_str, $ast_str, "sprint( skip => \@node_id_list ), $desc";
+    my $distilled_ast = $ast->distill;
 
-#    warn Dumper $distilled;
-    my $got_distilled = $distilled->sprint();
+#    warn Dumper $distilled_ast;
+    my $distilled_ast_str = $distilled_ast->sprint();
+#    warn $distilled_ast_str;
 
-    eq_or_diff $got_distilled, $expected_distilled, "distill()";
+    eq_or_diff $distilled_ast_str, $skip_ast_str, "distill(), $desc";
 
 } ## for my $test (@$tests) ...
 
