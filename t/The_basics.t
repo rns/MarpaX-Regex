@@ -94,35 +94,31 @@ my $tests = [
          <optional exponent> ::= ([eE][+-]?\d+)?
          digit               ::= \d
         }, '1.3', 1, [ [ '', '1.3', '', undef ] ], 'building a regexp, unfactored form' ],
-];
-
-
-
-
-
-=pod more tests
-
     [ q{
          number              ::= ^ (<optional sign>) (<f.p. mantissa> | integer) <optional exponent> $
          <optional sign>     ::= [+-]?
          <f.p. mantissa>     ::= integer '.' integer # mantissa of the form a.b
                                | digit+ '.'          # mantissa of the form a.
          <f.p. mantissa>     ::= '.' digit+          # mantissa of the form .b
-         integer             ::= integer             # integer of the form a
+         integer             ::= digit+              # integer of the form a
          <optional exponent> ::= ([eE][+-]?\d+)?
          digit               ::= \d
-        }, '1.3', 1, '1.3', 'building a regexp, partially integer-factored form' ],
+        }, '1.3', 1, [ [ '', '1.3', undef ] ], 'building a regexp, partially integer-factored form' ],
     [ q{
          number              ::= ^ <optional sign> (<f.p. mantissa> | integer) <optional exponent> $
          <optional sign>     ::= [+-]?
          <f.p. mantissa>     ::= integer '.' integer  # mantissa of the form a.b
                                | integer '.'          # mantissa of the form a.
          <f.p. mantissa>     ::= '.' integer          # mantissa of the form .b
-         integer             ::= integer              # integer of the form a
+         integer             ::= digit+               # integer of the form a
          <optional exponent> ::= ( [eE][+-]? integer )?
-         integer             ::= digit+
          digit               ::= \d
-        }, '1.3', 1, '1.3', 'building a regexp, fully integer-factored form' ],
+        }, '1.3', 1, [ [ '1.3', undef ] ], 'building a regexp, fully integer-factored form' ],
+];
+
+
+=pod more tests
+
     # possible todo: feature: infer a more compact form below from the ast
     # possible todo: feature: assemble empty rules to form ()? groups
     #    /^[+-]?\ *(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/;
@@ -207,7 +203,7 @@ for my $test (@$tests){
                 $exp_list = [] if not defined $exp_list;
                 # compare to single-item array if matched in list context
                 $exp_list = [ $exp_list ] unless ref $exp_list;
-                warn Dumper \@got, $exp_list;
+#                warn Dumper \@got, $exp_list;
                 is_deeply \@got, $exp_list, "$desc: list-context match";
 
             } ## for $input ...
