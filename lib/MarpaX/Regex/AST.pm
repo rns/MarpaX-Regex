@@ -344,22 +344,13 @@ sub delete_unproductive_terminals{
 sub replace_terminals{
     my ($ast, $terminals) = @_;
 
-    my %terminals;
-    for my $t (@$terminals){
-        my $t_lhs = $t->first_child->first_child->first_child;
-        my $t_alternatives = $t->child(1)->children;
-#        warn Dumper $t_alternatives;
-#        warn "# replacing $t_lhs:\n", $t->sprint;
-        $terminals{$t_lhs} = $t_alternatives;
-    }
-
     my $opts = {
         visit => sub {
             my ($ast, $context) = @_;
             if ($ast->id eq 'statement'){
                 my $lhs = $ast->[1]->[1]->[1];
 #                    warn "#stat $lhs: ", $ast->sprint;
-                return if exists $terminals{ $lhs }; # don't replace itself
+                return if exists $terminals->{ $lhs }; # don't replace itself
                 my $alternatives = $ast->child(1)->children;
                 # in reverse order to replace from the end
                 for (my $ix = @$alternatives - 1; $ix >= 0; $ix--){
@@ -368,9 +359,9 @@ sub replace_terminals{
 #                    warn $id;
                     if ($id eq 'bare name' or $id eq 'bracketed name'){
                         my $symbol = $alternative->first_child();
-                        if (exists $terminals{ $symbol } ){
+                        if (exists $terminals->{ $symbol } ){
 #                            warn "# $ix-th child '$symbol' needs replacing:\n", $ast->[2]->[$ix+1]->sprint;
-                            splice(@{ $ast->[2] }, $ix+1, 1, @{ $terminals{ $symbol } });
+                            splice(@{ $ast->[2] }, $ix+1, 1, @{ $terminals->{ $symbol } });
                         }
                     }
                 }
@@ -394,8 +385,18 @@ sub substitute{
     warn "# with NO terminals replaced:\n", $ast->sprint;
 #    while (my $terminals = $ast->terminals()){
     my $terminals = $ast->terminals();
+
+    my %terminals;
+    for my $t (@$terminals){
+        my $t_lhs = $t->first_child->first_child->first_child;
+        my $t_alternatives = $t->child(1)->children;
+#        warn Dumper $t_alternatives;
+#        warn "# replacing $t_lhs:\n", $t->sprint;
+        $terminals{$t_lhs} = $t_alternatives;
+    }
+
 #    warn $_->sprint for @$terminals;
-    $ast->replace_terminals($terminals);
+    $ast->replace_terminals(\%terminals);
 #    }
     warn "# with terminals replaced:\n", $ast->sprint;
 
