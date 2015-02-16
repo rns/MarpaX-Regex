@@ -180,16 +180,22 @@ for my $test (@$tests){
 
     my $ast = MarpaX::Regex::AST->new( $value );
 
+    my %node_skip_list = map { $_ => 1 } (
+        'group', 'primary',
+        'alternative rule',
+        'symbol', 'symbol name',
+        'character class', 'literal'
+    );
+
     my $skip_ast_str = $ast->sprint( {
-        skip => [
-            'group', 'primary',
-            'alternative rule',
-            'symbol', 'symbol name',
-            'character class', 'literal',
-        ]
+        skip => sub {
+            my ($ast, $context) = @_;
+            my ($node_id, @children) = @$ast;
+            return exists $node_skip_list{ $node_id }
+        }
     } );
 
-    eq_or_diff $skip_ast_str, $ast_str, "sprint( skip => \@node_id_list ), $desc";
+    eq_or_diff $skip_ast_str, $ast_str, "sprint() with node skip list, $desc";
     my $distilled_ast = $ast->distill;
 
 #    warn Dumper $distilled_ast;

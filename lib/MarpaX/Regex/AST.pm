@@ -80,8 +80,7 @@ sub walk{
     });
     $opts->{traversal} //= 'preorder';
     $opts->{max_depth} //= 1_000_000;
-    $opts->{skip} //= [];
-    $opts->{skip} = { map { $_ => 1 } @{ $opts->{skip} } };
+    $opts->{skip} //= sub { 0 };
     $opts->{depth} = 0;
 
     return do_walk( $ast, $opts );
@@ -93,17 +92,19 @@ sub do_walk{
     $ast = CORE::bless [ '#text', $ast ], __PACKAGE__ unless ref $ast;
     my ($node_id, @children) = @{ $ast };
 
-    $opts->{depth}++ unless exists $opts->{skip}->{$node_id};
+    my $context = { depth => $opts->{depth} };
 
-    unless ($opts->{depth} > $opts->{max_depth} or exists $opts->{skip}->{$node_id} ){
-        $opts->{visit}->( $ast, { depth => $opts->{depth} } );
+    $opts->{depth}++ unless $opts->{skip}->( $ast, $context );
+
+    unless ($opts->{depth} > $opts->{max_depth} or $opts->{skip}->( $ast, $context ) ) {
+        $opts->{visit}->( $ast, $context );
     }
 
     unless (@children == 1 and not ref $children[0]){ # [ literal name, literal value ]
         do_walk( $_, $opts  ) for grep { defined } @children;
     }
 
-    $opts->{depth}-- unless exists $opts->{skip}->{$node_id};
+    $opts->{depth}-- unless $opts->{skip}->( $ast, $context );
 }
 
 sub sprint{
@@ -119,7 +120,7 @@ sub sprint{
     $opts->{visit} = sub {
         my ($ast, $context) = @_;
         my ($node_id, @children) = @$ast;
-        my $indent = $opts->{indent} x ( $context->{depth} - 1 );
+        my $indent = $opts->{indent} x ( $context->{depth} );
         if (@children == 1 and not ref $children[0]){
             $s .= qq{$indent $node_id '$children[0]'\n};
         }
@@ -182,12 +183,11 @@ sub substitute{
     #   add new statement, which joins them as alternatives
     my $same_lhs = {};
     my $opts = {
-        skip => [
-            'group', 'primary',
-            'alternative rule',
-            'symbol', 'symbol name',
-            'character class', 'literal',
-        ],
+        skip => sub {
+            my ($ast, $context) = @_;
+            my ($node_id, @children) = @$ast;
+            # ...
+        },
         visit => sub {
             my ($ast, $context) = @_;
             my ($node_id, @children) = @$ast;
@@ -212,13 +212,19 @@ sub distill{
 
     local $Data::Dumper::Indent = 0;
 
+    my %node_skip_list = map { $_ => 1 } (
+        'group', 'primary',
+        'alternative rule',
+        'symbol', 'symbol name',
+        'character class', 'literal'
+    );
+
     my $opts = {
-        skip => [
-            'group', 'primary',
-            'alternative rule',
-            'symbol', 'symbol name',
-            'character class', 'literal',
-        ],
+        skip => sub {
+            my ($ast, $context) = @_;
+            my ($node_id, @children) = @$ast;
+            return exists $node_skip_list{ $node_id }
+        },
         visit => sub {
             my ($ast, $context) = @_;
             my ($node_id, @children) = @$ast;
