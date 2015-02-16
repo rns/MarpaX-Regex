@@ -39,19 +39,16 @@ sub MarpaX::Regex::AST::bless{
 
 }
 
-# set last child if caller provides it, get last child if not
+# set last child if caller provides it,
+# return the last child
 sub last_child{
     my ($ast, $child) = @_;
 
     if (defined $child){
         croak "Child must be a ref to " . __PACKAGE__ unless ref $child eq __PACKAGE__;
         push @{ $ast }, $child;
-        return $ast;
     }
-    else{
-        return $ast->[-1];
-    }
-
+    return $ast->[-1];
 }
 
 sub _assert_options{
