@@ -50,11 +50,25 @@ sub id{
 }
 
 # set the child at index $ix if caller provides it,
+# if $child is an array ref
+#   if @$child is empty, delete child at inde $ix
+#   else replace child with @$child
+#
 # return the child at index $ix
 sub child{
     my ($ast, $ix, $child) = @_;
     if (defined $ix and defined $child){
-        $ast->[$ix + 1] = $child;
+        if (ref $child eq "ARRAY"){
+            if (@$child == 0){
+                splice(@$ast, $ix, 1);
+            }
+            else{
+                splice(@$ast, $ix, 1, @$child);
+            }
+        }
+        else{
+            $ast->[$ix + 1] = $child;
+        }
     }
     return $ast->[$ix + 1];
 }
@@ -295,6 +309,7 @@ sub merge{
     return $ast;
 }
 
+# return terminals as a list or undef if there isn't any
 sub terminals{
     my ($ast) = @_;
 
@@ -317,7 +332,56 @@ sub terminals{
     }; ## opts
     $ast->walk( $opts );
 
-    return \@terminals;
+    return @terminals > 0 ? \@terminals : undef;
+}
+
+# delete terminal statements, whose lhs is not in the alternatives of any other statement
+sub delete_unproductive_terminals{
+    my ($ast, $terminals) = @_;
+}
+
+# replace occurrences of terminal's name with terminal's alternatives
+sub replace_terminals{
+    my ($ast, $terminals) = @_;
+
+    my %terminals;
+    for my $t (@$terminals){
+        my $t_lhs = $t->first_child->first_child->first_child;
+        my $t_alternatives = $t->child(1)->children;
+#        warn Dumper $t_alternatives;
+#        warn "# replacing $t_lhs:\n", $t->sprint;
+        $terminals{$t_lhs} = $t_alternatives;
+    }
+
+    my $opts = {
+        visit => sub {
+            my ($ast, $context) = @_;
+            if ($ast->id eq 'statement'){
+                my $lhs = $ast->[1]->[1]->[1];
+#                    warn "#stat $lhs: ", $ast->sprint;
+                return if exists $terminals{ $lhs }; # don't replace itself
+                my $alternatives = $ast->child(1)->children;
+                # in reverse order to replace from the end
+                for (my $ix = @$alternatives - 1; $ix >= 0; $ix--){
+                    my $alternative = $alternatives->[$ix];
+                    my $id = $alternative->id();
+#                    warn $id;
+                    if ($id eq 'bare name' or $id eq 'bracketed name'){
+                        my $symbol = $alternative->first_child();
+                        if (exists $terminals{ $symbol } ){
+#                            warn "# $ix-th child '$symbol' needs replacing:\n", $ast->[2]->[$ix+1]->sprint;
+                            splice(@{ $ast->[2] }, $ix+1, 1, @{ $terminals{ $symbol } });
+                        }
+                    }
+                }
+#                warn "# replace indices: @ix";
+#                for my $ix (@ix){
+#                    splice(@{ $ast->[2] }, $ix, 1, @$t_alternatives);
+#                }
+            }
+        }
+    }; ## opts
+    $ast->walk( $opts );
 }
 
 # substitute named terminal nodes contents instead of name occurrencs
@@ -327,8 +391,13 @@ sub substitute{
 
     $ast->merge();
 
+    warn "# with NO terminals replaced:\n", $ast->sprint;
+#    while (my $terminals = $ast->terminals()){
     my $terminals = $ast->terminals();
-    warn $_->sprint for @$terminals;
+#    warn $_->sprint for @$terminals;
+    $ast->replace_terminals($terminals);
+#    }
+    warn "# with terminals replaced:\n", $ast->sprint;
 
     # while (find_terminals()) {
     #   substitute occurrence of terminal names with their contents
