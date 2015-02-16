@@ -68,6 +68,8 @@ lexeme default = action => [ name, values ] latm => 1
     alternation         ~ '|'
 
     group ::= primary
+            | '(?:' group ')' quantifier assoc => group
+            | '(?:' group ')' assoc => group
             | '(' group ')' quantifier assoc => group
             | '(' group ')' assoc => group
            || group group       # and
