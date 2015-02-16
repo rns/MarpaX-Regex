@@ -104,7 +104,9 @@ for my $test (@$tests){
         max_depth => 6,
     } );
 
-    warn Dumper $ast->distill;
+    my $distilled = $ast->distill;
+    warn Dumper $distilled;
+    warn $distilled->sprint();
 
 } ## for my $test (@$tests) ...
 
