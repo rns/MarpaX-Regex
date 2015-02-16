@@ -14,6 +14,13 @@ use Scalar::Util qw{ blessed };
 
 sub new {
     my ($class, $ast) = @_;
+
+    # scalar $ast means the user wants create an empty ast
+    # and $ast is the root node ID
+    unless (ref $ast){
+        $ast = [ $ast ];
+    }
+
     return MarpaX::Regex::AST::bless( $ast, $class );
 }
 
@@ -29,6 +36,21 @@ sub MarpaX::Regex::AST::bless{
     } );
 
     return $ast;
+
+}
+
+# set last child if caller provides it, get last child if not
+sub last_child{
+    my ($ast, $child) = @_;
+
+    if (defined $child){
+        croak "Child must be a ref to " . __PACKAGE__ unless ref $child eq __PACKAGE__;
+        push @{ $ast }, $child;
+        return $ast;
+    }
+    else{
+        return $ast->[-1];
+    }
 
 }
 
@@ -117,9 +139,10 @@ sub sprint{
 sub distill{
     my ($ast) = @_;
 
+    my $root;
     my $parent = [];
     my $parent_id;
-    my @parent_children;
+    my $children;
 
     my $opts = {
         skip => [
@@ -133,10 +156,13 @@ sub distill{
             my ($node_id, @children) = @$ast;
             if ($node_id eq 'statements'){
                 $parent_id = $node_id;
+                $root = MarpaX::Regex::AST->new( $node_id );
+                $parent = $root;
             }
             elsif ($node_id eq 'statement'){
                 warn qq{child: $node_id of parent: $parent_id};
                 $parent_id = $node_id;
+                $parent = $parent->last_child( MarpaX::Regex::AST->new( $node_id ) );
             }
             elsif ($node_id eq 'lhs'){
                 warn qq{child: $node_id of parent: $parent_id};
@@ -158,7 +184,7 @@ sub distill{
 
     $ast->walk( $opts );
 
-    return $parent;
+    return $root;
 }
 
 =head2 dump()
