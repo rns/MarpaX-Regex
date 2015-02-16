@@ -93,9 +93,11 @@ sub do_walk{
 
     my $context = { depth => $opts->{depth} };
 
-    $opts->{depth}++ unless $opts->{skip}->( $ast, $context );
+    my $skip = $opts->{skip}->( $ast, $context );
 
-    unless ($opts->{depth} > $opts->{max_depth} or $opts->{skip}->( $ast, $context ) ) {
+    $opts->{depth}++ unless $skip;
+
+    unless ($opts->{depth} > $opts->{max_depth} or $skip) {
         $opts->{visit}->( $ast, $context );
     }
 
@@ -103,7 +105,7 @@ sub do_walk{
         do_walk( $_, $opts  ) for grep { defined } @children;
     }
 
-    $opts->{depth}-- unless $opts->{skip}->( $ast, $context );
+    $opts->{depth}-- unless $skip;
 }
 
 sub sprint{
