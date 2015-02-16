@@ -257,12 +257,41 @@ sub merge{
     return $ast;
 }
 
+sub terminals{
+    my ($ast) = @_;
+
+    my $opts = {
+        skip => sub {
+            my ($ast, $context) = @_;
+            my ($node_id, @children) = @$ast;
+            # terminal statements must have no symbol name or bracketed name
+            # alternatives
+            if ($node_id eq 'statement'){
+                my $alternatives = $children[1];
+                warn "# terminals: alternatives:\n", $alternatives->sprint;
+            }
+
+        },
+        visit => sub {
+            my ($ast, $context) = @_;
+            my ($node_id, @children) = @$ast;
+
+        }
+    }; ## opts
+
+    $ast->walk( $opts );
+
+    return $ast;
+}
+
 # substitute named terminal nodes contents instead of name occurrencs
 # and delete named terminal nodes if they become inaccessible
 sub substitute{
     my ($ast) = @_;
 
     $ast->merge();
+
+    $ast->terminals();
 
     # while (find_terminals()) {
     #   substitute occurrence of terminal names with their contents
