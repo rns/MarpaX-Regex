@@ -170,28 +170,97 @@ sub concat{
     return $s . "\n";
 }
 
+# merge statement nodes having the same lhs with alternation '|'
+# into the first occurrence of such statement and delete other occurrences
+sub merge{
+    my ($ast) = @_;
+
+#   gather all statements having the same lhs
+    my %alternatives_by_lhs;
+    my $opts = {
+        visit => sub {
+            my ($ast, $context) = @_;
+            my ($node_id, @children) = @$ast;
+            if ($node_id eq 'statement'){
+                my ($lhs, $alternatives) = ( $children[0]->[1]->[1], $children[1] );
+                push @{ $alternatives_by_lhs{ $lhs } }, $alternatives ;
+            }
+        }
+    }; ## opts
+    $ast->walk( $opts );
+    my %mergeable_alternatives = map { $_ => $alternatives_by_lhs{$_} }
+        grep { @{ $alternatives_by_lhs{$_} } > 1 } keys %alternatives_by_lhs;
+
+#    warn Dumper \%mergeable_alternatives;
+#   join mergeable alternatives with '|'
+    my $alternation = MarpaX::Regex::AST->new( [ 'alternation', '|' ] );
+    for my $lhs (keys %mergeable_alternatives){
+        my @merged;
+        for my $ms ( @{ $mergeable_alternatives{ $lhs } }){
+#            warn Dumper $ms;
+            my ($node_id, @children) = @$ms;
+            push @merged, @children, $alternation;
+        }
+        pop @merged;
+        $mergeable_alternatives{ $lhs } = MarpaX::Regex::AST->new(
+            [ 'alternatives', @merged ] );
+    }
+#    warn $mergeable_alternatives{$_}->sprint for keys %mergeable_alternatives;
+
+    # replace first occurrence of mergeable alternatives' lhs
+    # with merged alternatives
+    $opts = {
+        visit => sub {
+            my ($ast, $context) = @_;
+            my ($node_id, @children) = @$ast;
+            if ($node_id eq 'statement'){
+                my $lhs = $children[0]->[1]->[1];
+                if ( exists $mergeable_alternatives{ $lhs } ){
+                    if (defined $mergeable_alternatives{ $lhs }){
+#                        warn "# first occurrence of $lhs:\n", $ast->[2]->sprint;
+                        $ast->[2] = $mergeable_alternatives{ $lhs };
+                        $mergeable_alternatives{ $lhs } = undef;
+                    }
+                    else{
+                        # mark for deletion
+                        $ast->[2] = undef;
+                    }
+                }
+            }
+        }
+    }; ## opts
+    $ast->walk( $opts );
+    # delete all occurrences of mergeable alternatives' lhs except
+    # the first
+    $opts = {
+        visit => sub {
+            my ($ast, $context) = @_;
+            my ($node_id, @children) = @$ast;
+            if ($node_id eq 'statements'){
+                my @new_children;
+                for my $statement (@children){
+#                    warn "# stat:", $statement->sprint;
+                    next unless defined $statement->[2];
+#                    warn "# kept";
+                    push @new_children, $statement;
+                }
+                @{ $ast }[1..$#children + 1] = @new_children;
+            }
+        }
+    }; ## opts
+
+    $ast->walk( $opts );
+
+#    warn $ast->sprint;
+    return $ast;
+}
+
 # substitute named terminal nodes contents instead of name occurrencs
 # and delete named terminal nodes if they become inaccessible
 sub substitute{
     my ($ast) = @_;
 
-    # merge statement nodes having the same lhs with alternation '|'
-    #   gather all statements having the same lhs
-    #   remove them
-    #   add new statement, which joins them as alternatives
-    my $same_lhs = {};
-    my $opts = {
-        skip => sub {
-            my ($ast, $context) = @_;
-            my ($node_id, @children) = @$ast;
-            # ...
-        },
-        visit => sub {
-            my ($ast, $context) = @_;
-            my ($node_id, @children) = @$ast;
-
-        }
-    }; ## opts
+    $ast->merge();
 
     # while (find_terminals()) {
     #   substitute occurrence of terminal names with their contents

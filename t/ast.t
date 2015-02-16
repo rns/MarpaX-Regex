@@ -51,29 +51,9 @@ my $tests = [
     twenty   ::= '20'
 },
 q{
- statements
-   statement
-     lhs
-       bare name 's'
-     alternatives
-       #text '('
-       bare name 'nineteen'
-       alternation '|'
-       bare name 'twenty'
-       alternation '|'
-       #text ')'
-       character escape '\d'
-       character escape '\d'
-   statement
-     lhs
-       bare name 'nineteen'
-     alternatives
-       string without single quotes and metacharacters '19'
-   statement
-     lhs
-       bare name 'twenty'
-     alternatives
-       string without single quotes and metacharacters '20'
+(?#s)((?#nineteen)|(?#twenty)|)\d\d
+(?#nineteen)19
+(?#twenty)20
 },
 'grouping, years' ],
 # /^[+-]?(\d+\.\d+|\d+\.|\.\d+|\d+)([eE][+-]?\d+)?$/
@@ -88,125 +68,57 @@ q{
     digit               ::= \d
 },
 q{
- statements
-   statement
-     lhs
-       bare name 'number'
-     alternatives
-       metacharacter '^'
-       #text '('
-       bracketed name '<optional sign>'
-       #text ')'
-       #text '('
-       bracketed name '<f.p. mantissa>'
-       alternation '|'
-       bare name 'integer'
-       #text ')'
-       #text '('
-       bracketed name '<optional exponent>'
-       #text ')'
-       metacharacter '$'
-   statement
-     lhs
-       bracketed name '<optional sign>'
-     alternatives
-       #text '['
-       character class characters '+-'
-       #text ']'
-       quantifier '?'
-   statement
-     lhs
-       bracketed name '<f.p. mantissa>'
-     alternatives
-       bare name 'digit'
-       quantifier '+'
-       string without single quotes and metacharacters '.'
-       bare name 'digit'
-       quantifier '+'
-       alternation '|'
-       bare name 'digit'
-       quantifier '+'
-       string without single quotes and metacharacters '.'
-   statement
-     lhs
-       bracketed name '<f.p. mantissa>'
-     alternatives
-       string without single quotes and metacharacters '.'
-       bare name 'digit'
-       quantifier '+'
-   statement
-     lhs
-       bare name 'integer'
-     alternatives
-       bare name 'digit'
-       quantifier '+'
-   statement
-     lhs
-       bracketed name '<optional exponent>'
-     alternatives
-       #text '('
-       #text '['
-       character class characters 'eE'
-       #text ']'
-       #text '['
-       character class characters '+-'
-       #text ']'
-       quantifier '?'
-       character escape '\d'
-       quantifier '+'
-       #text ')'
-       quantifier '?'
-   statement
-     lhs
-       bare name 'digit'
-     alternatives
-       character escape '\d'
+(?#number)^((?#<optional sign>))((?#<f.p. mantissa>)|(?#integer))((?#<optional exponent>))$
+(?#<optional sign>)[+-]?
+(?#<f.p. mantissa>)(?#digit)+.(?#digit)+|(?#digit)+.|.(?#digit)+
+(?#integer)(?#digit)+
+(?#<optional exponent>)([eE][+-]?\d+)?
+(?#digit)\d
 },
 'building a regexp, unfactored form' ],
+# /^[+-]?(\d+\.\d+|\d+\.|\.\d+|\d+)([eE][+-]?\d+)?$/
+[ q{
+    number              ::= ^ (<optional sign>) (<f.p. mantissa> | integer) (<optional exponent>) $
+    <optional sign>     ::= [+-]?
+    <f.p. mantissa>     ::= digit+ '.' digit+  # mantissa of the form a.b
+    integer             ::= digit+             # integer of the form a
+    <f.p. mantissa>     ::= '.' digit+         # mantissa of the form .b
+    <optional exponent> ::= ([eE][+-]?\d+)?
+    <f.p. mantissa>     ::= digit+ '.'         # mantissa of the form a.
+    digit               ::= \d
+},
+q{
+(?#number)^((?#<optional sign>))((?#<f.p. mantissa>)|(?#integer))((?#<optional exponent>))$
+(?#<optional sign>)[+-]?
+(?#<f.p. mantissa>)(?#digit)+.(?#digit)+|.(?#digit)+|(?#digit)+.
+(?#integer)(?#digit)+
+(?#<optional exponent>)([eE][+-]?\d+)?
+(?#digit)\d
+},
+'building a regexp, unfactored form, more dispered same-lhs statements' ],
+
 ];
 
 for my $test (@$tests){
 
-    my ($source, $ast_str, $desc) = @$test;
+    my ($source, $expected_regex, $desc) = @$test;
 
     $source =~ s/^\s+|\s+$//g;
-    $ast_str =~ s/^\n+//g;
-    diag "Regex BNF: $source";
+#    $ast_str =~ s/^\n+//g;
 
     # must parse unambiguously unless parse error is expected
     my $rex = MarpaX::Regex->new;
     my $value = eval { $rex->parse($source) };
     ok !$@, 'Regex BNF parsed';
 
-    my $ast = MarpaX::Regex::AST->new( $value );
+    my $regex = MarpaX::Regex::AST->new( $value )
+        ->distill()
+            ->substitute()
+                ->concat();
 
-    my %node_skip_list = map { $_ => 1 } (
-        'group', 'primary',
-        'alternative rule',
-        'symbol', 'symbol name',
-        'character class', 'literal'
-    );
-
-    my $skip_ast_str = $ast->sprint( {
-        skip => sub {
-            my ($ast, $context) = @_;
-            my ($node_id, @children) = @$ast;
-            return exists $node_skip_list{ $node_id }
-        }
-    } );
-
-    eq_or_diff $skip_ast_str, $ast_str, "sprint() with node skip list, $desc";
-    my $distilled_ast = $ast->distill;
-
-#    warn Dumper $distilled_ast;
-    my $distilled_ast_str = $distilled_ast->sprint();
-#    warn $distilled_ast_str;
-
-    eq_or_diff $distilled_ast_str, $skip_ast_str, "distill(), $desc";
-
-    $distilled_ast->substitute();
-
-    warn $distilled_ast->concat();
+    diag "BNF:\n$source";
+    eq_or_diff $regex, $expected_regex, "distill()->substitute()->concat(), $desc";
+    diag "regex:\n $regex";
 
 } ## for my $test (@$tests) ...
 
