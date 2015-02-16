@@ -2,6 +2,8 @@ use 5.010;
 use strict;
 use warnings;
 
+use Test::More;
+
 use Data::Dumper;
 $Data::Dumper::Indent = 1;
 $Data::Dumper::Terse = 1;
@@ -54,3 +56,6 @@ $r->read( \("<" . $string . ">"));
 say "multiple parses!" if $r->ambiguity_metric() > 1;
 my $v = ${ $r->value() };
 say Dumper $v;
+
+ok(1);
+done_testing();

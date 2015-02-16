@@ -2,6 +2,8 @@ use 5.010;
 use strict;
 use warnings;
 
+use Test::More;
+
 use Data::Dumper;
 $Data::Dumper::Indent = 1;
 $Data::Dumper::Terse = 1;
@@ -40,3 +42,6 @@ my $r = Marpa::R2::Scanless::R->new( { grammar => $g } );
 $r->read(\$input);
 
 say Dumper ${ $r->value() };
+
+ok(1);
+done_testing();

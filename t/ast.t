@@ -51,9 +51,7 @@ my $tests = [
     twenty   ::= '20'
 },
 q{
-(?#s)((?#nineteen)|(?#twenty)|)\d\d
-(?#nineteen)19
-(?#twenty)20
+(?#s)(19|20|)\d\d
 },
 'grouping, years' ],
 # /^[+-]?(\d+\.\d+|\d+\.|\.\d+|\d+)([eE][+-]?\d+)?$/
@@ -68,12 +66,7 @@ q{
     digit               ::= \d
 },
 q{
-(?#number)^((?#<optional sign>))((?#<f.p. mantissa>)|(?#integer))((?#<optional exponent>))$
-(?#<optional sign>)[+-]?
-(?#<f.p. mantissa>)(?#digit)+.(?#digit)+|(?#digit)+.|.(?#digit)+
-(?#integer)(?#digit)+
-(?#<optional exponent>)([eE][+-]?\d+)?
-(?#digit)\d
+(?#number)^([+-]?)(\d+.\d+|\d+.|.\d+|\d+)(([eE][+-]?\d+)?)$
 },
 'building a regexp, unfactored form' ],
 # /^[+-]?(\d+\.\d+|\d+\.|\.\d+|\d+)([eE][+-]?\d+)?$/
@@ -88,12 +81,7 @@ q{
     digit               ::= \d
 },
 q{
-(?#number)^((?#<optional sign>))((?#<f.p. mantissa>)|(?#integer))((?#<optional exponent>))$
-(?#<optional sign>)[+-]?
-(?#<f.p. mantissa>)(?#digit)+.(?#digit)+|.(?#digit)+|(?#digit)+.
-(?#integer)(?#digit)+
-(?#<optional exponent>)([eE][+-]?\d+)?
-(?#digit)\d
+(?#number)^([+-]?)(\d+.\d+|.\d+|\d+.|\d+)(([eE][+-]?\d+)?)$
 },
 'building a regexp, unfactored form, more dispered same-lhs statements' ],
 
