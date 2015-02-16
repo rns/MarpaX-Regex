@@ -142,19 +142,28 @@ sub concat{
     _assert_options( $opts, { } );
     $opts->{indent} = '  ';
 
+    my $parent_node_id;
+
     $opts->{visit} = sub {
         my ($ast, $context) = @_;
         my ($node_id, @children) = @$ast;
         my $indent = $opts->{indent} x ( $context->{depth} - 1 );
-        if ($node_id eq "lhs" ){
-            my $lhs = $children[0]->[1];
-            $s .= "\n" . "(?#$lhs)";
+
+        if ($node_id eq 'lhs' or $node_id eq 'alternatives'){
+            $parent_node_id = $node_id;
+            $s .= "\n" if $parent_node_id eq 'lhs';
         }
-        elsif($node_id eq 'bare name'){
+
+        if($node_id eq 'bare name' or $node_id eq 'bracketed name'){
+            if ($parent_node_id eq 'lhs' or $parent_node_id eq 'alternatives'){
+                my $lhs = $children[0];
+                $s .= "(?#$lhs)";
+            }
         }
         elsif (@children == 1 and not ref $children[0]){
             $s .= qq{$children[0]};
         }
+
     };
 
     $ast->walk( $opts );
