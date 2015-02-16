@@ -142,7 +142,7 @@ sub translate{
             my $lhs = $children[0]->[1]->[1]->[1]->[1];
 #            warn "lhs: ", Dumper $lhs;
 #            warn "# $lhs alternatives:\n", Dumper $children[0]->[2]->[1];
-            $s .= "(?#$lhs)" . "(?:" . join('', map { $self->translate( $_ ) } $children[0]->[2] ) . ")";
+            $s .= "(?#$lhs)" . join('', map { $self->translate( $_ ) } $children[0]->[2] );
         }
         else{
             $s .= join '', map { $self->translate( $_ ) } @children;
