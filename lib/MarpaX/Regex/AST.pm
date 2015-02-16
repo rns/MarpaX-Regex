@@ -39,7 +39,34 @@ sub MarpaX::Regex::AST::bless{
 
 }
 
-# set last child if caller provides it,
+# set node id if caller provides it,
+# return node id
+sub id{
+    my ($ast, $id) = @_;
+    if (defined $id){
+        $ast->[0] = $id;
+    }
+    return $ast->[0];
+}
+
+# set the child at index $ix if caller provides it,
+# return the child at index $ix
+sub child{
+    my ($ast, $ix, $child) = @_;
+    if (defined $ix and defined $child){
+        $ast->[$ix + 1] = $child;
+    }
+    return $ast->[$ix + 1];
+}
+
+# set first child if caller provides it,
+# return the first child
+sub first_child{
+    my ($ast, $child) = @_;
+    return $ast->child(0, $child);
+}
+
+# append last child if caller provides it,
 # return the last child
 sub last_child{
     my ($ast, $child) = @_;
@@ -49,6 +76,17 @@ sub last_child{
         push @{ $ast }, $child;
     }
     return $ast->[-1];
+}
+
+# set the node's children if caller provides them,
+# return the last child
+sub children{
+    my ($ast, $children) = @_;
+    my ($node, @children) = @$ast;
+    if (defined $children){
+        @{ $ast }[1..$#children + 1] = @$children;
+    }
+    return \@children;
 }
 
 sub _assert_options{
@@ -246,7 +284,7 @@ sub merge{
 #                    warn "# kept";
                     push @new_children, $statement;
                 }
-                @{ $ast }[1..$#children + 1] = @new_children;
+                $ast->children(\@new_children);
             }
         }
     }; ## opts
