@@ -70,8 +70,7 @@ sub _assert_options{
 
 }
 
-# skip option to filter intermediate nodes
-
+# assert options and do_walk()
 sub walk{
     my ($ast, $opts ) = @_;
 
@@ -154,8 +153,7 @@ sub concat{
             $parent_node_id = $node_id;
             $s .= "\n" if $parent_node_id eq 'lhs';
         }
-
-        if($node_id eq 'bare name' or $node_id eq 'bracketed name'){
+        elsif($node_id eq 'bare name' or $node_id eq 'bracketed name'){
             if ($parent_node_id eq 'lhs' or $parent_node_id eq 'alternatives'){
                 my $lhs = $children[0];
                 $s .= "(?#$lhs)";
