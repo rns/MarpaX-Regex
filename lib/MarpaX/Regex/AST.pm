@@ -137,7 +137,8 @@ sub distill{
     my ($ast) = @_;
 
     my $root;
-    my $parent = [];
+    my $parent;
+    my $statement;
     my $parent_id;
     my $children;
 
@@ -159,19 +160,25 @@ sub distill{
             elsif ($node_id eq 'statement'){
                 warn qq{child: $node_id of parent: $parent_id};
                 $parent_id = $node_id;
-                $parent = $parent->last_child( MarpaX::Regex::AST->new( $node_id ) );
+                $statement = $root->last_child( MarpaX::Regex::AST->new( $node_id ) );
+#                warn "# parent of $node_id\n", Dumper $parent;
             }
             elsif ($node_id eq 'lhs'){
                 warn qq{child: $node_id of parent: $parent_id};
                 $parent_id = $node_id;
+                $parent = $statement->last_child( MarpaX::Regex::AST->new( $node_id ) );
+#                warn "# parent of $node_id\n", Dumper $parent;
             }
             elsif ($node_id eq 'alternatives'){
                 warn qq{child: $node_id of parent: $parent_id};
                 $parent_id = $node_id;
+                $parent = $statement->last_child( MarpaX::Regex::AST->new( $node_id ) );
+#                warn "# parent of $node_id\n", Dumper $parent;
             }
             elsif (@children == 1 and not ref $children[0]){
                 $node_id = 'symbol' if $node_id eq 'bare name';
-                warn qq{child: $node_id: $children[0] of parent: $parent_id};
+#                warn qq{child: $node_id: $children[0] of parent: $parent_id};
+                $parent->last_child( MarpaX::Regex::AST->new( $ast ) );
             }
             else{
                 warn "unknown node type: $node_id", Dumper $ast;
