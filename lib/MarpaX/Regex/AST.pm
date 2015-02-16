@@ -190,32 +190,28 @@ sub distill{
         visit => sub {
             my ($ast, $context) = @_;
             my ($node_id, @children) = @$ast;
+            # parent nodes
             if ($node_id eq 'statements'){
                 $root = MarpaX::Regex::AST->new( $node_id );
                 $parent = $root;
             }
             elsif ($node_id eq 'statement'){
                 $statement = $root->last_child( MarpaX::Regex::AST->new( $node_id ) );
-#                warn "# parent of $node_id\n", Dumper $parent;
             }
             elsif ($node_id eq 'lhs'){
                 $parent = $statement->last_child( MarpaX::Regex::AST->new( $node_id ) );
-#                warn "# parent of $node_id\n", Dumper $parent;
             }
             elsif ($node_id eq 'alternatives'){
                 $parent = $statement->last_child( MarpaX::Regex::AST->new( $node_id ) );
-#                warn "# parent of $node_id\n", Dumper $parent;
             }
-#            elsif ($node_id eq 'quantifier'){
-#                $parent = $statement->last_child( MarpaX::Regex::AST->new( $node_id ) );
-#                warn "# parent of $node_id\n", Dumper $parent;
-#            }
+            # child nodes; #text nodes will also be added here
+            # so we don't care about <quantifier modifier>'s (yet)
             elsif (@children == 1 and not ref $children[0]){
-                $node_id = 'symbol' if $node_id eq 'bare name';
                 $parent->last_child( MarpaX::Regex::AST->new( $ast ) );
             }
             else{
-                warn "# unknown node type: $node_id:\n", Dumper $ast;
+                # debug-only
+                # warn "# unknown node type: $node_id:\n", Dumper $ast;
             }
         }
     }; ## opts
