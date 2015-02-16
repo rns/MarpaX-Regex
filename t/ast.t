@@ -3,6 +3,7 @@ use strict;
 use warnings;
 
 use Test::More;
+use Test::Differences;
 
 use Data::Dumper;
 $Data::Dumper::Indent = 1;
@@ -79,6 +80,9 @@ for my $test (@$tests){
     ok !$@, 'Regex BNF parsed';
 
     my $ast = MarpaX::Regex::AST->new( $value );
+
+=pod debug code
+
 #    warn $ast->dump( { Indent => 1, Deepcopy => 1 } );
     warn $ast->sprint( {
         skip => [ 'group', 'primary',
@@ -104,9 +108,30 @@ for my $test (@$tests){
         max_depth => 6,
     } );
 
+$ast->sprint( {
+        skip => [ 'group', 'primary',
+            'alternative rule', 'symbol name', 'character class', 'literal', 'symbol'
+        ],
+#        max_depth => 6,
+    } );
+
+=cut
+
+    my $expected_distilled = $ast->sprint( {
+        skip => [
+            'group', 'primary',
+            'alternative rule',
+            'symbol', 'symbol name',
+            'character class', 'literal',
+        ]
+    } );
+
     my $distilled = $ast->distill;
-    warn Dumper $distilled;
-    warn $distilled->sprint();
+
+#    warn Dumper $distilled;
+    my $got_distilled = $distilled->sprint();
+
+    eq_or_diff $got_distilled, $expected_distilled, "distill()";
 
 } ## for my $test (@$tests) ...
 
