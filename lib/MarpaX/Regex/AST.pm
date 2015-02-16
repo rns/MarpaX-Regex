@@ -133,13 +133,41 @@ sub sprint{
     return $s;
 }
 
+sub concat{
+    my ($ast, $opts ) = @_;
+
+    my $s = '';
+
+    $opts //= { };
+    _assert_options( $opts, { } );
+    $opts->{indent} = '  ';
+
+    $opts->{visit} = sub {
+        my ($ast, $context) = @_;
+        my ($node_id, @children) = @$ast;
+        my $indent = $opts->{indent} x ( $context->{depth} - 1 );
+        if ($node_id eq "lhs" ){
+            my $lhs = $children[0]->[1];
+            $s .= "\n" . "(?#$lhs)";
+        }
+        elsif($node_id eq 'bare name'){
+        }
+        elsif (@children == 1 and not ref $children[0]){
+            $s .= qq{$children[0]};
+        }
+    };
+
+    $ast->walk( $opts );
+
+    return $s . "\n";
+}
+
 sub distill{
     my ($ast) = @_;
 
     my $root;
     my $parent;
     my $statement;
-    my $parent_id;
 
     local $Data::Dumper::Indent = 0;
 
@@ -154,35 +182,31 @@ sub distill{
             my ($ast, $context) = @_;
             my ($node_id, @children) = @$ast;
             if ($node_id eq 'statements'){
-                $parent_id = $node_id;
                 $root = MarpaX::Regex::AST->new( $node_id );
                 $parent = $root;
             }
             elsif ($node_id eq 'statement'){
-#                warn qq{child: $node_id of parent: $parent_id};
-                $parent_id = $node_id;
                 $statement = $root->last_child( MarpaX::Regex::AST->new( $node_id ) );
 #                warn "# parent of $node_id\n", Dumper $parent;
             }
             elsif ($node_id eq 'lhs'){
-#                warn qq{child: $node_id of parent: $parent_id};
-                $parent_id = $node_id;
                 $parent = $statement->last_child( MarpaX::Regex::AST->new( $node_id ) );
 #                warn "# parent of $node_id\n", Dumper $parent;
             }
             elsif ($node_id eq 'alternatives'){
-#                warn qq{child: $node_id of parent: $parent_id};
-                $parent_id = $node_id;
                 $parent = $statement->last_child( MarpaX::Regex::AST->new( $node_id ) );
 #                warn "# parent of $node_id\n", Dumper $parent;
             }
+#            elsif ($node_id eq 'quantifier'){
+#                $parent = $statement->last_child( MarpaX::Regex::AST->new( $node_id ) );
+#                warn "# parent of $node_id\n", Dumper $parent;
+#            }
             elsif (@children == 1 and not ref $children[0]){
                 $node_id = 'symbol' if $node_id eq 'bare name';
-#                warn qq{child: $node_id: $children[0] of parent: $parent_id};
                 $parent->last_child( MarpaX::Regex::AST->new( $ast ) );
             }
             else{
-                warn "unknown node type: $node_id", Dumper $ast;
+                warn "# unknown node type: $node_id:\n", Dumper $ast;
             }
         }
     }; ## opts

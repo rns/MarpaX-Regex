@@ -48,7 +48,7 @@ my $tests = [
     [ q{ s ::= [b] ( 'a' | 'b' ) }, "bb", 1, [ 'b' ], 'grouping' ],
     [ q{ s ::= ( 'ac' | 'b' ) 'b' }, [ 'acb', "bb" ], [ 1, 1 ], [ 'ac', 'b' ], 'grouping' ],
     # non-capturing parens
-    [ q{ s ::= (?: 'ac' | 'b' ) 'b' }, [ 1, 1 ], [ 1, 1 ], [ 'ac', 'b' ], 'grouping' ],
+    [ q{ s ::= (?: 'ac' | 'b' ) 'b' }, [ 'acb', "bb" ], [ 1, 1 ], [ 1, 1 ], 'grouping: non-capturing parens' ],
     # matches 'ac' at start of string or 'bc' anywhere
     # todo: test error, e.g. unbalanced parens: ( ('^a'|'b')'c'
     [ q{ s ::= ( ^ 'a' | 'b' ) 'c' }, [ 'ac', "bc" ], [ 1, 1 ], [ 'a', 'b' ], 'grouping' ],

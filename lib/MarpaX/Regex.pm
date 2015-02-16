@@ -138,27 +138,7 @@ sub parse{
 
 sub translate{
     my ($self, $ast) = @_;
-    state $depth++;
-    my $s;
-    my $indent = "  " x ($depth - 1);
-    if (ref $ast){
-        my ($node_id, @children) = @$ast;
-        if ($node_id eq 'statement'){
-#            warn Dumper $node_id, \@children;
-            my $lhs = $children[0]->[1]->[1]->[1]->[1];
-#            warn "lhs: ", Dumper $lhs;
-#            warn "# $lhs alternatives:\n", Dumper $children[0]->[2]->[1];
-            $s .= "(?#$lhs)" . join('', map { $self->translate( $_ ) } $children[0]->[2] );
-        }
-        else{
-            $s .= join '', map { $self->translate( $_ ) } @children;
-        }
-    }
-    else{
-        $s .= $ast;
-    }
-    $depth--;
-    return $s;
+    return MarpaX::Regex::AST->new($ast)->distill()->concat();
 }
 
 sub parse_debug{
