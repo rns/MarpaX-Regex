@@ -155,7 +155,7 @@ sub do_walk{
 
     unless (@children == 1 and not ref $children[0]){ # [ literal name, literal value ]
         # todo: check why grep { defined } is needed
-        # todo: set siblings here for context
+        # todo: set siblings and parents for context
         do_walk( $_, $opts  ) for grep { defined } @children;
     }
 
