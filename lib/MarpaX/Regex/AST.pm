@@ -479,9 +479,7 @@ sub distill{
     return $root;
 }
 
-=head2 dump()
-    This method returns Data::Dumper::Dumper($ast) setting local Data::Dumper options
-=cut
+# set local Data::Dumper options as return Data::Dumper::Dumper($ast)
 sub dump{
     my ($ast, $opts ) = @_;
     $opts->{Indent} //= $Data::Dumper::Indent;
