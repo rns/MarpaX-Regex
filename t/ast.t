@@ -35,9 +35,8 @@ use MarpaX::Regex::AST;
 
     handlers
 
-    is ast manipulation even possible without deepcopy?
-        cut, paste, copy
-        filter
+    cut, paste, copy
+    filter
 
 =cut
 

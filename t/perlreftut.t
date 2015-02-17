@@ -119,11 +119,13 @@ my $tests = [
 
 =pod more tests
 
+Power tools
+
     # possible todo: feature: infer a more compact form below from the ast
     # possible todo: feature: assemble empty rules to form ()? groups
     #    /^[+-]?\ *(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/;
 
-
+#-------------------------------------------------------------------
 /^
             [+-]?\ *      # first, match an optional sign
             (             # then match integers or f.p. mantissas:
@@ -139,6 +141,39 @@ my $tests = [
 or written in the compact form,
 
     /^[+-]?\ *(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/;
+#-------------------------------------------------------------------
+    /\s+[abc[:digit:]xyz]\s*/;  # match a,b,c,x,y,z, or a digit
+    /^=item\s[[:digit:]]/;      # match '=item',
+                                # followed by a space and a digit
+    /\s+[abc\p{IsDigit}xyz]\s+/;  # match a,b,c,x,y,z, or a digit
+    /^=item\s\p{IsDigit}/;        # match '=item',
+                                  # followed by a space and a digit
+#-------------------------------------------------------------------
+    /(?i)yes/;  # match 'yes' case insensitively
+    /yes/i;     # same thing
+    /(?x)(          # freeform version of an integer regexp
+                          [+-]?  # match an optional sign
+                          \d+    # match a sequence of digits
+                  )
+        /x;
+#-------------------------------------------------------------------
+    $x = "I catch the housecat 'Tom-cat' with catnip";
+    $x =~ /cat(?=\s)/;   # matches 'cat' in 'housecat'
+    @catwords = ($x =~ /(?<=\s)cat\w+/g);  # matches,
+                                           # $catwords[0] = 'catch'
+                                           # $catwords[1] = 'catnip'
+    $x =~ /\bcat\b/;  # matches 'cat' in 'Tom-cat'
+    $x =~ /(?<=\s)cat(?=\s)/; # doesn't match; no isolated 'cat' in
+                              # middle of $x
+#-------------------------------------------------------------------
+    $x = "foobar";
+    $x =~ /foo(?!bar)/;  # doesn't match, 'bar' follows 'foo'
+    $x =~ /foo(?!baz)/;  # matches, 'baz' doesn't follow 'foo'
+    $x =~ /(?<!\s)foo/;  # matches, there is no \s before 'foo'=cut
+#-------------------------------------------------------------------
+    $x = "abc(de(fg)h";  # unbalanced parentheses
+    $x =~ /\( ( [^()]+ | \([^()]*\) )+ \)/x;
+    $x =~ /\( ( (?>[^()]+) | \([^()]*\) )+ \)/x;
 
 =cut
 
