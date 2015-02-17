@@ -31,17 +31,17 @@ Priorities
 
 =====the=above=are=done=====
   
+  escaped metacharacters in literals and charclasses
+    like <character class character>
+
+  coerce symbol names to REs
+    Currently NAME is restricted to simple identifiers only.  In other words, it must match "/^[_A-Za-z][_A-Za-z0-9]*\z/" or its Unicode extension (see utf8), though it is not extended by the locale (see perllocale).
+
   pretty-printing and commenting
 
   recursion
 
   assertions
-
-  escaped metacharacters in literals
-    like <character class character>
-
-  coerce symbol names to REs
-    Currently NAME is restricted to simple identifiers only.  In other words, it must match "/^[_A-Za-z][_A-Za-z0-9]*\z/" or its Unicode extension (see utf8), though it is not extended by the locale (see perllocale).
 
   more regex-ish syntax  
     bracketed symbols <>
