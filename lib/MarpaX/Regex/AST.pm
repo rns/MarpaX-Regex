@@ -433,18 +433,17 @@ sub distill{
 
     local $Data::Dumper::Indent = 0;
 
-    my %node_skip_list = map { $_ => 1 } (
-        'group', 'primary',
-        'alternative rule',
-        'symbol', 'symbol name',
-        'character class', 'literal'
-    );
-
     my $opts = {
         skip => sub {
             my ($ast, $context) = @_;
             my ($node_id, @children) = @$ast;
-            return exists $node_skip_list{ $node_id }
+            state $node_skip_list = { map { $_ => 1 } (
+                'group', 'primary',
+                'alternative rule',
+                'symbol', 'symbol name',
+                'character class', 'literal'
+            ) };
+            return exists $node_skip_list->{ $node_id }
         },
         visit => sub {
             my ($ast, $context) = @_;
