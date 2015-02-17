@@ -1,6 +1,8 @@
 ﻿MarpaX-Regex
 ============
 
+quicker and easier writing
+    
 improve build- and read-ability
   define names for metacharacters and character escapes
   take your regex and modularize it
@@ -17,26 +19,35 @@ compile to Marpa::R2 for long strings and/or hard regexes
 Syntax
 ------    
 
-# symbols in RE groups, empty groups, <> optional for symbols
+# symbols in RE groups, empty groups, optional <> for symbols with spaces
   s ::= 'house' ( 'cat' |)      
   s ::= 'house' ( 'cat' ( 's' |) |)
   
 Priorities
 ----------
 
-    explicit non-capturing parens (?: ...)
-      others?
-    bracketed symbols <>
-    bareword literals
-  
   substitution
+  explicit non-capturing parens (?: ...)
+
+=====the=above=are=done=====
+  
+  pretty-printing and commenting
+
+  recursion
+
+  assertions
 
   escaped metacharacters in literals
     like <character class character>
 
   coerce symbol names to REs
     Currently NAME is restricted to simple identifiers only.  In other words, it must match "/^[_A-Za-z][_A-Za-z0-9]*\z/" or its Unicode extension (see utf8), though it is not extended by the locale (see perllocale).
-  
+
+  more regex-ish syntax  
+    bracketed symbols <>
+    bareword literals
+    PEG uses quoted literals and bareword symbols
+
   names for character escapes, metacharacters and other line noise
       <start of line>   ::= ^
       <end of line>     ::= $
