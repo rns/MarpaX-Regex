@@ -171,9 +171,49 @@ or written in the compact form,
     $x =~ /foo(?!baz)/;  # matches, 'baz' doesn't follow 'foo'
     $x =~ /(?<!\s)foo/;  # matches, there is no \s before 'foo'=cut
 #-------------------------------------------------------------------
+# Using independent subexpressions to prevent backtracking
+    $x = "ab";
+    $x =~ /a*ab/;  # matches
+
+    $x =~ /(?>a*)ab/;  # doesn't match!
+#-------------------------------------------------------------------
     $x = "abc(de(fg)h";  # unbalanced parentheses
     $x =~ /\( ( [^()]+ | \([^()]*\) )+ \)/x;
     $x =~ /\( ( (?>[^()]+) | \([^()]*\) )+ \)/x;
+#-------------------------------------------------------------------
+# Conditional expressions
+% simple_grep '^(\w+)(\w+)?(?(2)\g2\g1|\g1)$' /usr/dict/words
+    beriberi
+    coco
+    couscous
+    deed
+    ...
+    toot
+    toto
+    tutu
+#-------------------------------------------------------------------
+ /[ATGC]+(?(?<=AA)G|C)$/;
+matches a DNA sequence such that it either ends in AAG,
+or some other base pair combination and C .
+
+#-------------------------------------------------------------------
+# Defining named patterns
+/^ (?&osg)\ * ( (?&int)(?&dec)? | (?&dec) )
+            (?: [eE](?&osg)(?&int) )?
+        $
+        (?(DEFINE)
+            (?<osg>[-+]?)         # optional sign
+            (?<int>\d++)          # integer
+            (?<dec>\.(?&int))     # decimal fraction
+        )/x
+#-------------------------------------------------------------------
+# Recursive patterns
+    my $pp = qr/^(\W* (?: (\w) (?1) \g{-1} | \w? ) \W*)$/ix;
+    for $s ( "saippuakauppias", "A man, a plan, a canal: Panama!" ){
+        print "'$s' is a palindrome\n" if $s =~ /$pp/;
+    }
+
+
 
 =cut
 
