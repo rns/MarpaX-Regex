@@ -28,34 +28,63 @@ my @groups = $string =~ m/
 	)                   # end of capture group 1
 	/xg;
 
+# bnf:
+my $BNFish = q{
+    <balanced brackets> ::=
+        (
+            '<'
+                (?:
+                    <non angle brackets>
+                        |
+                    <balanced brackets>
+                )*
+            '>'
+        )
+
+    <non angle brackets> ::= [^<>]++ # non-backtracking
+};
+
+=pod
+# regex:
+
+    # pretty:
+        (?<balanced_brackets>
+            <
+                (?:
+                    [^<>]++
+                        |
+                    (?&balanced_brackets)
+                )*
+            >
+        )
+
+    # compact:
+
+        (?<balanced_brackets><(?:[^<>]++|(?&balanced_brackets))*>)
+
+A statement is recursive if one or more alternatives contain symbols,
+which are the same as lhs; recursive statement must become
+a named capture group (?<$lhs>...) and references to it in alternatives
+must become (?&$lhs) recurses into that group.
+
+    named capture groups
+         If you prefer to name your groups, you can use (?&name) to recurse into that group.
+
+    # cannot skip group nodes -- they are needed to pretty print and comment
+
+=cut
+
 $" = "\n\t";
 say "Found:\n\t@groups\n";
 
-use Marpa::R2;
+use MarpaX::Regex;
+use MarpaX::Regex::AST;
 
-my $dsl = <<DSL;
+# must parse unambiguously unless parse error is expected
+my $rex = MarpaX::Regex->new;
+my $value = eval { $rex->parse($BNFish) };
+ok !$@, 'Regex BNF parsed';
 
-:default ::= action => [ name, values ]
-lexeme default = action => [ name, value ]
-
-string ::= '<' <string in brackets> '>'
-<string in brackets> ::= <string with or without brackets>+
-<string with or without brackets> ::= string | <string without brackets>
-
-<string without brackets> ~ [^<>]+
-
-DSL
-
-
-my $g = Marpa::R2::Scanless::G->new( { source  => \$dsl } );
-my $r = Marpa::R2::Scanless::R->new( {
-    grammar => $g,
-    trace_terminals => 0,
-} );
-$r->read( \("<" . $string . ">"));
-say "multiple parses!" if $r->ambiguity_metric() > 1;
-my $v = ${ $r->value() };
-say Dumper $v;
-
-ok(1);
+my $ast = MarpaX::Regex::AST->new($value);
+warn $ast->sprint;
 done_testing();
