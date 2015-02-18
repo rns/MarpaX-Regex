@@ -139,7 +139,7 @@ sub parse{
 sub translate{
     my ($self, $ast) = @_;
     $ast = MarpaX::Regex::AST->new($ast);
-    return $ast->distill()->substitute()->concat();
+    return $ast->distill->substitute->recurse->concat();
 }
 
 sub parse_debug{

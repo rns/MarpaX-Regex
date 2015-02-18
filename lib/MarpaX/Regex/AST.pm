@@ -92,13 +92,23 @@ sub last_child{
     return $ast->[-1];
 }
 
-# set the node's children if caller provides them,
-# return the last child
+# set the node's children to $children array ref if caller provides it,
+# if $children is a CODE ref, returns the nodes' children for which $children->($child) returns 1
+# return children
 sub children{
     my ($ast, $children) = @_;
     my ($node, @children) = @$ast;
     if (defined $children){
-        @{ $ast }[1..$#children + 1] = @$children;
+        if (ref $children eq "CODE"){
+            my $found = [];
+            for my $ix (0..$#children){
+                warn "child $ix undefined" unless defined $children[$ix];
+                push @$found, $children[$ix] if $children->( $children[$ix] );
+            }
+        }
+        else {
+            @{ $ast }[1..$#children + 1] = @$children;
+        }
     }
     return \@children;
 }
@@ -405,6 +415,28 @@ sub replace_terminals{
     $ast->walk( $opts );
 
     return %$deletable_terminals ? 1 : 0;
+}
+
+=head2
+
+    find recursive statements and translate them to regex syntax
+
+    A statement is recursive if one or more alternatives contain symbols,
+    which are the same as lhs; recursive statement must become
+    a named capture group (?<$lhs>...) and references to it in alternatives
+    must become (?&$lhs) recurses into that group.
+
+=cut
+
+sub recurse{
+    my ($ast) = @_;
+    my $recursive_statements = $ast->children(
+        sub{
+            my ($statement) = @_;
+            warn $statement->sprint;
+        }
+    );
+    return $ast;
 }
 
 # substitute named terminal nodes contents instead of name occurrencs
