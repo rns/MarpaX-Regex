@@ -102,12 +102,11 @@ sub children{
         if (ref $children eq "CODE"){
             my $found = [];
             for my $ix (0..$#children){
-                warn "child $ix undefined" unless defined $children[$ix];
                 push @$found, $children[$ix] if $children->( $children[$ix] );
             }
         }
         else {
-            @{ $ast }[1..$#children + 1] = @$children;
+            @{ $ast }[1 .. @$ast - 1 ] = @$children;
         }
     }
     return \@children;
@@ -317,7 +316,6 @@ sub merge{
 
     $ast->walk( $opts );
 
-#    warn $ast->sprint;
     return $ast;
 }
 
@@ -379,19 +377,19 @@ sub replace_terminals{
                         my $symbol = $alternative->first_child();
                         if (exists $terminals{ $symbol } ){
 #                            warn "# $ix-th child '$symbol' needs replacing:\n", $ast->[2]->[$ix+1]->sprint;
-                            splice(@{ $ast->[2] }, $ix+1, 1, @{ $terminals{ $symbol } });
+                            splice(@{ $ast->[2] }, $ix + 1, 1, @{ $terminals{ $symbol } });
                             $deletable_terminals->{ $symbol }++;
                         }
                     }
                 }
-#                warn "# replace indices: @ix";
-#                for my $ix (@ix){
-#                    splice(@{ $ast->[2] }, $ix, 1, @$t_alternatives);
-#                }
             }
         }
     }; ## opts
     $ast->walk( $opts );
+
+#    warn "# after terminal replacement before deletion:\n", $ast->dump;
+
+    # todo: terminal deletion is broken! use skip and rebuild the tree
 
     # delete terminals statements we've just replaced
     $opts = {
@@ -414,6 +412,8 @@ sub replace_terminals{
     }; ## opts
     $ast->walk( $opts );
 
+#    warn "# After deletion:\n", $ast->dump;
+
     return %$deletable_terminals ? 1 : 0;
 }
 
@@ -433,7 +433,7 @@ sub recurse{
     my $recursive_statements = $ast->children(
         sub{
             my ($statement) = @_;
-            warn $statement->sprint;
+#            warn $statement->sprint if defined $statement;
         }
     );
     return $ast;
@@ -450,7 +450,7 @@ sub substitute{
 
     while (1){
         my $terminals = $ast->terminals();
-    #    warn $_->sprint for @$terminals;
+#        warn $_->sprint for @$terminals;
         last if not $ast->replace_terminals($terminals);
 #        warn "# with terminals replaced:\n", $ast->sprint;
     }

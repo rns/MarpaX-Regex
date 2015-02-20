@@ -101,6 +101,7 @@ for my $test (@$tests){
     my $regex = MarpaX::Regex::AST->new( $value )
         ->distill()
             ->substitute()
+              ->recurse()
                 ->concat();
 
     diag "BNF:\n$source";

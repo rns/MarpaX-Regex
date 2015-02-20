@@ -62,10 +62,24 @@ my $BNFish = q{
 
         (?<balanced_brackets><(?:[^<>]++|(?&balanced_brackets))*>)
 
-A statement is recursive if one or more alternatives contain symbols,
-which are the same as lhs; recursive statement must become
-a named capture group (?<$lhs>...) and references to it in alternatives
-must become (?&$lhs) recurses into that group.
+
+Wrap alternatives in
+
+[ '#text', '(?<' . $lhs> ')' } ]
+[ ]
+[ '#text', ')' ]
+
+Replace
+[ 'bare name', ]
+
+bracketed name '<balanced brackets>'
+[ '#text', '(?&' . 'balanced_brackets' . ')' ]
+
+$ast->child(ast->IX_BEFORE_FIRST, $child);
+$ast->child(ast->IX_AFTER_LAST, $child);
+$ast->child(sub{ $_->[0] eq 'bracketed name' }, $child);
+my ($child, $ix) = $ast->child( sub{ $_->[0] eq 'bracketed name' } );
+my (undef, $ix) = $ast->child( sub{ $_->[0] eq 'bracketed name' } );
 
     named capture groups
          If you prefer to name your groups, you can use (?&name) to recurse into that group.
@@ -86,5 +100,6 @@ my $value = eval { $rex->parse($BNFish) };
 ok !$@, 'Regex BNF parsed';
 
 my $ast = MarpaX::Regex::AST->new($value);
-warn $ast->sprint;
+$ast = $ast->distill->substitute;
+
 done_testing();
