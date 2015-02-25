@@ -150,7 +150,6 @@ sub do_walk{
     my ($ast, $opts ) = @_;
 
     $ast = CORE::bless [ '#text', $ast ], __PACKAGE__ unless ref $ast;
-    my ($node_id, @children) = @{ $ast };
 
     my $context = { depth => $opts->{depth} };
 
@@ -162,6 +161,7 @@ sub do_walk{
         $opts->{visit}->( $ast, $context );
     }
 
+    my ($node_id, @children) = @{ $ast };
     unless (@children == 1 and not ref $children[0]){ # [ literal name, literal value ]
         # todo: check why grep { defined } is needed
         # todo: set siblings and parents for context
