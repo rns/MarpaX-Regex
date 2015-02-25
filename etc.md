@@ -26,7 +26,7 @@ Syntax
 Priorities
 ----------
 
-  substitution
+  symbol substitution
   explicit non-capturing parens (?: ...)
 
 =====the=above=are=done=====
@@ -53,7 +53,7 @@ Priorities
       <end of line>     ::= $
       <word character>  ::= \w
       <digit>           ::= \d  
-  
+
 use cases
   Building regexp as a rewriting system
     BNF 

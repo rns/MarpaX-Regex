@@ -319,54 +319,54 @@ sub merge{
     return $ast;
 }
 
-# return terminals as a list or undef if there isn't any
-sub terminals{
+# return symbols as a list or undef if there isn't any
+sub symbols{
     my ($ast) = @_;
 
     my %symbol_name = map { $_ => 1 } ('bare name', 'bracketed name');
-    my @terminals;
+    my @symbols;
     my $opts = {
         skip => sub {
             my ($ast, $context) = @_;
-            # terminal is a statement ...
+            # symbol is a statement ...
             return 1 unless $ast->id eq 'statement';
             # having no symbol name or bracketed name alternatives
             my @symbols = grep { exists $symbol_name{$_->id()} }
                     @{ $ast->child(1)->children() };
-            return @symbols > 0; # skip non-terminals
+            return @symbols > 0; # skip non-symbols
         },
         visit => sub {
             my ($ast, $context) = @_;
-            push @terminals, $ast;
+            push @symbols, $ast;
         }
     }; ## opts
     $ast->walk( $opts );
 
-    return @terminals > 0 ? \@terminals : undef;
+    return @symbols > 0 ? \@symbols : undef;
 }
 
-# replace occurrences of terminal's name with terminal's alternatives
-sub replace_terminals{
-    my ($ast, $terminals) = @_;
+# replace occurrences of symbol's name with symbol's alternatives
+sub replace_symbols{
+    my ($ast, $symbols) = @_;
 
-    my %terminals;
-    for my $t (@$terminals){
+    my %symbols;
+    for my $t (@$symbols){
         my $t_lhs = $t->first_child->first_child->first_child;
         my $t_alternatives = $t->child(1)->children;
 #        warn Dumper $t_alternatives;
 #        warn "# replacing $t_lhs:\n", $t->sprint;
-        $terminals{$t_lhs} = $t_alternatives;
+        $symbols{$t_lhs} = $t_alternatives;
     }
 
-    # terminal must be deleted if it's been used in replacement at least once
-    my $deletable_terminals = {};
+    # symbol must be deleted if it's been used in replacement at least once
+    my $deletable_symbols = {};
     my $opts = {
         visit => sub {
             my ($ast, $context) = @_;
             if ($ast->id eq 'statement'){
                 my $lhs = $ast->[1]->[1]->[1];
 #                    warn "#stat $lhs: ", $ast->sprint;
-                return if exists $terminals{ $lhs }; # don't replace itself
+                return if exists $symbols{ $lhs }; # don't replace itself
                 my $alternatives = $ast->child(1)->children;
                 # in reverse order to replace from the end
                 for (my $ix = @$alternatives - 1; $ix >= 0; $ix--){
@@ -375,10 +375,10 @@ sub replace_terminals{
 #                    warn $id;
                     if ($id eq 'bare name' or $id eq 'bracketed name'){
                         my $symbol = $alternative->first_child();
-                        if (exists $terminals{ $symbol } ){
+                        if (exists $symbols{ $symbol } ){
 #                            warn "# $ix-th child '$symbol' needs replacing:\n", $ast->[2]->[$ix+1]->sprint;
-                            splice(@{ $ast->[2] }, $ix + 1, 1, @{ $terminals{ $symbol } });
-                            $deletable_terminals->{ $symbol }++;
+                            splice(@{ $ast->[2] }, $ix + 1, 1, @{ $symbols{ $symbol } });
+                            $deletable_symbols->{ $symbol }++;
                         }
                     }
                 }
@@ -387,11 +387,11 @@ sub replace_terminals{
     }; ## opts
     $ast->walk( $opts );
 
-#    warn "# after terminal replacement before deletion:\n", $ast->dump;
+    warn "# after symbol replacement before deletion:\n", $ast->dump;
 
-    # todo: terminal deletion is broken! use skip and rebuild the tree
+    # todo: symbol deletion is broken! use skip and rebuild the tree
 
-    # delete terminals statements we've just replaced
+    # delete symbols statements we've just replaced
     $opts = {
         visit => sub {
             my ($ast, $context) = @_;
@@ -402,7 +402,7 @@ sub replace_terminals{
                 # todo: check why grep { defined } is needed
                 for my $statement (grep { defined } @children){
 #                    warn "# checking for deletion stat:\n", $statement->sprint;
-                    next if exists $deletable_terminals->{ $statement->first_child->first_child->first_child };
+                    next if exists $deletable_symbols->{ $statement->first_child->first_child->first_child };
 #                    warn "# kept";
                     push @new_children, $statement;
                 }
@@ -414,7 +414,7 @@ sub replace_terminals{
 
 #    warn "# After deletion:\n", $ast->dump;
 
-    return %$deletable_terminals ? 1 : 0;
+    return %$deletable_symbols ? 1 : 0;
 }
 
 =head2
@@ -433,26 +433,26 @@ sub recurse{
     my $recursive_statements = $ast->children(
         sub{
             my ($statement) = @_;
-#            warn $statement->sprint if defined $statement;
+            warn $statement->sprint if defined $statement;
         }
     );
     return $ast;
 }
 
-# substitute named terminal nodes contents instead of name occurrencs
-# and delete named terminal nodes if they become inaccessible
+# substitute symbol nodes contents instead of symbol name occurrencs
+# and delete symbol nodes if they become inaccessible
 sub substitute{
     my ($ast) = @_;
 
     $ast->merge();
 
-#    warn "# with NO terminals replaced:\n", $ast->sprint;
+#    warn "# with NO symbols replaced:\n", $ast->sprint;
 
     while (1){
-        my $terminals = $ast->terminals();
-#        warn $_->sprint for @$terminals;
-        last if not $ast->replace_terminals($terminals);
-#        warn "# with terminals replaced:\n", $ast->sprint;
+        my $symbols = $ast->symbols();
+#        warn $_->sprint for @$symbols;
+        last if not $ast->replace_symbols($symbols);
+#        warn "# with symbols replaced:\n", $ast->sprint;
     }
 
     return $ast;
