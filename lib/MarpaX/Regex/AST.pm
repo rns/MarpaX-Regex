@@ -354,15 +354,15 @@ sub replace_symbols{
     my ($ast, $symbols) = @_;
 
     my %symbols;
-    for my $t (@$symbols){
-        my $t_lhs = $t->descendant(2)->first_child;
-        my $t_alternatives = $t->child(1)->children;
-#        warn Dumper $t_alternatives;
-#        warn "# replacing $t_lhs:\n", $t->sprint;
-        $symbols{$t_lhs} = $t_alternatives;
+    for my $symbol (@$symbols){
+        my $symbol_lhs = $symbol->descendant(2)->first_child;
+        my $symbol_alternatives = $symbol->child(1)->children;
+#        warn Dumper $symbol_alternatives;
+#        warn "# replacing $symbol_lhs:\n", $symbol->sprint;
+        $symbols{$symbol_lhs} = $symbol_alternatives;
     }
 
-    # symbol must be deleted if it's been used in replacement at least once
+    # symbol must be removed if it's been used in replacement at least once
     my $removable_symbols = {};
     my $opts = {
         visit => sub {
@@ -372,7 +372,7 @@ sub replace_symbols{
 #                    warn "#stat $lhs: ", $ast->sprint;
                 return if exists $symbols{ $lhs }; # don't replace itself
                 my $alternatives = $ast->child(1)->children;
-                # in reverse order to replace from the end
+                # in reverse order to splice() from the end
                 for (my $ix = @$alternatives - 1; $ix >= 0; $ix--){
                     my $alternative = $alternatives->[$ix];
                     my $id = $alternative->id();
@@ -391,29 +391,14 @@ sub replace_symbols{
     }; ## opts
     $ast->walk( $opts );
 
-#    warn "# after symbol replacement before deletion:\n", $ast->dump;
+#    warn "# after symbol replacement before removal:\n", $ast->dump;
 
-    # delete symbols statements we've just replaced
-    $opts = {
-        visit => sub {
-            my ($ast) = @_;
-            my ($node_id, @children) = @$ast;
-            if ($node_id eq 'statements'){
-#                warn "# checking for deletion stats:\n", Dumper $ast;
-                my @new_children;
-                for my $statement (@children){
-#                    warn "# checking for deletion stat:\n", $statement->sprint;
-                    next if exists $removable_symbols->{ $statement->descendant(2)->first_child };
-#                    warn "# kept";
-                    push @new_children, $statement;
-                }
-                $ast->children(\@new_children);
-            }
-        }
-    }; ## opts
-    $ast->walk( $opts );
+    # remove symbols statements we've just replaced
+    $ast->remove_children(sub{
+        exists $removable_symbols->{ $_[0]->descendant(2)->first_child }
+    });
 
-#    warn "# After deletion:\n", $ast->dump;
+#    warn "# After removal:\n", $ast->dump;
 
     return %$removable_symbols ? 1 : 0;
 }
@@ -441,7 +426,7 @@ sub recurse{
 }
 
 # substitute symbol nodes contents instead of symbol name occurrencs
-# and delete symbol nodes if they become inaccessible
+# and remove symbol nodes if they become inaccessible
 sub substitute{
     my ($ast) = @_;
 
