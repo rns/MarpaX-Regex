@@ -82,7 +82,7 @@ sub first_child{
 
 # append last child if caller provides it,
 # return the last child
-sub last_child{
+sub append_child{
     my ($ast, $child) = @_;
 
     if (defined $child){
@@ -488,18 +488,18 @@ sub distill{
                 $parent = $root;
             }
             elsif ($node_id eq 'statement'){
-                $statement = $root->last_child( MarpaX::Regex::AST->new( $node_id ) );
+                $statement = $root->append_child( MarpaX::Regex::AST->new( $node_id ) );
             }
             elsif ($node_id eq 'lhs'){
-                $parent = $statement->last_child( MarpaX::Regex::AST->new( $node_id ) );
+                $parent = $statement->append_child( MarpaX::Regex::AST->new( $node_id ) );
             }
             elsif ($node_id eq 'alternatives'){
-                $parent = $statement->last_child( MarpaX::Regex::AST->new( $node_id ) );
+                $parent = $statement->append_child( MarpaX::Regex::AST->new( $node_id ) );
             }
             # child nodes; #text nodes will also be added here
             # so we don't care about <quantifier modifier>'s (yet)
             elsif (@children == 1 and not ref $children[0]){
-                $parent->last_child( MarpaX::Regex::AST->new( $ast ) );
+                $parent->append_child( MarpaX::Regex::AST->new( $ast ) );
             }
             else{
                 # debug-only
