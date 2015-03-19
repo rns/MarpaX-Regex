@@ -285,39 +285,36 @@ sub merge{
                 my $lhs = $ast->descendant(2)->first_child();
                 if ( exists $mergeable_alternatives{ $lhs } ){
                     if (defined $mergeable_alternatives{ $lhs }){
-#                        warn "# first occurrence of $lhs:\n", $ast->[2]->sprint;
-                        $ast->[2] = $mergeable_alternatives{ $lhs };
+#                        warn "# first occurrence of $lhs:\n", $ast->child(1)->sprint;
+                        $ast->child( 1, $mergeable_alternatives{ $lhs } );
                         $mergeable_alternatives{ $lhs } = undef;
                     }
                     else{
                         # mark for deletion
-                        $ast->[2] = undef;
+                        $ast->child( 1, MarpaX::Regex::AST->new( '#deletable' ) );
                     }
                 }
             }
         }
     }; ## opts
     $ast->walk( $opts );
-    # delete all occurrences of mergeable alternatives' lhs except
-    # the first
-    $opts = {
+
+    # delete statements whose alternatives have been just marked for deletetion
+    $ast->walk( {
         visit => sub {
             my ($ast) = @_;
             my ($node_id, @children) = @$ast;
             if ($node_id eq 'statements'){
                 my @new_children;
                 for my $statement (@children){
-#                    warn "# stat:", $statement->sprint;
-                    next unless defined $statement->[2];
+                    next if $statement->child(1)->id eq '#deletable';
 #                    warn "# kept";
                     push @new_children, $statement;
                 }
                 $ast->children(\@new_children);
             }
         }
-    }; ## opts
-
-    $ast->walk( $opts );
+    } );
 
     return $ast;
 }
