@@ -26,11 +26,13 @@ Syntax
 Priorities
 ----------
 
-  symbol substitution
+  symbol expansion
   explicit non-capturing parens (?: ...)
 
 =====the=above=are=done=====
   
+  recursion
+
   escaped metacharacters in literals and charclasses
     like <character class character>
 
@@ -38,8 +40,6 @@ Priorities
     Currently NAME is restricted to simple identifiers only.  In other words, it must match "/^[_A-Za-z][_A-Za-z0-9]*\z/" or its Unicode extension (see utf8), though it is not extended by the locale (see perllocale).
 
   pretty-printing and commenting
-
-  recursion
 
   assertions
 
@@ -53,7 +53,21 @@ Priorities
       <end of line>     ::= $
       <word character>  ::= \w
       <digit>           ::= \d  
+  
+  abstract distill() 
+    parent/child pairs
 
+= ast
+
+  id()   
+  child(index_or_predicate)
+    first_child()
+    last_child()
+  children()
+  append_child(MarpaX::Regex::AST)
+  remove_child(index_or_predicate)
+  replace_child(index_or_predicate, MarpaX::Regex::AST)
+   
 use cases
   Building regexp as a rewriting system
     BNF 
@@ -63,6 +77,7 @@ use cases
       json parser by Randal
       angle brackets
       gruber url regexp
+      christiansen html parser
       Regexp::Common
       Regexp::Grammars
       Parse::RecDescent
@@ -419,3 +434,30 @@ https://gist.github.com/gruber/8891611
   )
 )
 
+christiansen html parser
+
+http://stackoverflow.com/questions/4231382/regular-expression-pattern-not-matching-anywhere-in-string/4234491#4234491
+
+= regex/bnf/ebnf equivalence
+  http://stackoverflow.com/questions/29124221/are-the-folowing-bnf-ebnf-regular-expressions-and-lex-syntax-correct
+
+  regular expression
+
+  [A-E]([A-E0-9_]*[$]?[A-E0-9_]*)
+  BNF
+
+  <S>::= <letter><Rest>
+  <Rest>::=<rest1><symbol>|<rest1><symbol><rest1>|<symbol><rest1>|<rest1>|<symbol>
+  <rest1>::=<character><rest1>|<rest1><character>|<character>
+  <character>::=A|B|C|D|E|1|2|3|4|_
+  <letter>::=A|B|C|D|E
+  <symbol>::=$
+  EBNF
+
+  S=letter{character}[symbol]{character}
+  letter=|"A"|"B"|"C"|"D"|"E"|
+  character=|"1"|"2"|"3"|"4"|"A"|"B"|"C"|"D"|"E"|"_"
+  symbol="$"
+  lex
+
+  ^[A-E][A-E0-3_]*[$]?[A-E0-3_]*$
