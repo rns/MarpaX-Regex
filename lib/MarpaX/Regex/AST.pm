@@ -106,7 +106,7 @@ sub children{
             }
         }
         else {
-            @{ $ast }[1 .. @$ast - 1 ] = @$children;
+            splice @$ast, 1, @$ast - 1, @$children;
         }
     }
     return \@children;
