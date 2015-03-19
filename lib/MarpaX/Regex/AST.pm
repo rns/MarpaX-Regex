@@ -63,11 +63,13 @@ sub descendant{
 }
 
 # set the child at index $ix if caller provides it,
-# if $child is an array ref
-#   else replace child with @$child
 # return the child at index $ix
 sub child{
     my ($ast, $ix, $child) = @_;
+    if (defined $child){
+        croak "Child must be a ref to " . __PACKAGE__ unless ref $child eq __PACKAGE__;
+        $ast->[$ix + 1] = $child;
+    }
     return $ast->[$ix + 1];
 }
 
