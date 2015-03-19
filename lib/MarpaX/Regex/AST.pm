@@ -198,6 +198,9 @@ sub sprint{
     return $s;
 }
 
+#
+# MarpaX::Regex-specific ast methods start here
+#
 sub concat{
     my ($ast, $opts ) = @_;
 
@@ -248,7 +251,7 @@ sub merge{
             if ($ast->id eq 'statement'){
                 my $lhs          = $ast->descendant(2)->first_child();
                 my $alternatives = $ast->child(1);
-                push @{ $alternatives_by_lhs{ $lhs } }, $alternatives ;
+                push @{ $alternatives_by_lhs{ $lhs } }, $alternatives;
             }
         }
     }; ## opts
@@ -266,14 +269,15 @@ sub merge{
             my ($node_id, @children) = @$ms;
             push @merged, @children, $alternation;
         }
-        pop @merged;
-        $mergeable_alternatives{ $lhs } = MarpaX::Regex::AST->new(
-            [ 'alternatives', @merged ] );
+        pop @merged; # remove traling $alternation
+        $mergeable_alternatives{ $lhs } =
+            MarpaX::Regex::AST->new( [ 'alternatives', @merged ] );
     }
 #    warn $mergeable_alternatives{$_}->sprint for keys %mergeable_alternatives;
 
     # replace first occurrence of mergeable alternatives' lhs
-    # with merged alternatives
+    # with merged alternatives, mark all other occurrences for deletion
+    # by setting them to undef
     $opts = {
         visit => sub {
             my ($ast) = @_;
