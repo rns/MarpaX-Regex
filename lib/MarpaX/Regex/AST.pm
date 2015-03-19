@@ -49,6 +49,13 @@ sub id{
     return $ast->[0];
 }
 
+# return true if the node is literal node
+sub is_literal{
+    my ($ast) = @_;
+    my ($node_id, @children) = @{ $ast };
+    return ( (@children == 1) and (not ref $children[0]) );
+}
+
 # set the child at index $ix if caller provides it,
 # if $child is an array ref
 #   else replace child with @$child
@@ -147,7 +154,8 @@ sub do_walk{
     }
 
     my ($node_id, @children) = @{ $ast };
-    unless (@children == 1 and not ref $children[0]){ # [ literal name, literal value ]
+    # don't walk into literal [ 'name', 'value' ] nodes
+    unless ($ast->is_literal()){ # @children == 1 and not ref $children[0]
         # todo: set siblings and parents for context
         do_walk( $_, $opts  ) for @children;
     }
@@ -169,7 +177,7 @@ sub sprint{
         my ($ast, $context) = @_;
         my ($node_id, @children) = @$ast;
         my $indent = $opts->{indent} x ( $context->{depth} );
-        if (@children == 1 and not ref $children[0]){
+        if ( $ast->is_literal ){
             $s .= qq{$indent $node_id '$children[0]'\n};
         }
         else{
