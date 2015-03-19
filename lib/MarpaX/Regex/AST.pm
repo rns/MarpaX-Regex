@@ -148,9 +148,8 @@ sub do_walk{
 
     my ($node_id, @children) = @{ $ast };
     unless (@children == 1 and not ref $children[0]){ # [ literal name, literal value ]
-        # todo: check why grep { defined } is needed
         # todo: set siblings and parents for context
-        do_walk( $_, $opts  ) for grep { defined } @children;
+        do_walk( $_, $opts  ) for @children;
     }
 
     $opts->{depth}-- unless $skip;
@@ -374,8 +373,6 @@ sub replace_symbols{
 
 #    warn "# after symbol replacement before deletion:\n", $ast->dump;
 
-    # todo: symbol deletion is broken! use skip and rebuild the tree
-
     # delete symbols statements we've just replaced
     $opts = {
         visit => sub {
@@ -384,8 +381,7 @@ sub replace_symbols{
             if ($node_id eq 'statements'){
 #                warn "# checking for deletion stats:\n", Dumper $ast;
                 my @new_children;
-                # todo: check why grep { defined } is needed
-                for my $statement (grep { defined } @children){
+                for my $statement (@children){
 #                    warn "# checking for deletion stat:\n", $statement->sprint;
                     next if exists $deletable_symbols->{ $statement->first_child->first_child->first_child };
 #                    warn "# kept";
