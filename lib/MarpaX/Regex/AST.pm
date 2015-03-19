@@ -282,10 +282,9 @@ sub merge{
     my $alternation = MarpaX::Regex::AST->new( [ 'alternation', '|' ] );
     for my $lhs (keys %mergeable_alternatives){
         my @merged;
-        for my $ms ( @{ $mergeable_alternatives{ $lhs } }){
-#            warn Dumper $ms;
-            my ($node_id, @children) = @$ms;
-            push @merged, @children, $alternation;
+        for my $ma ( @{ $mergeable_alternatives{ $lhs } }){
+#            warn Dumper $ma;
+            push @merged, @{ $ma->children }, $alternation;
         }
         pop @merged; # remove traling $alternation
         $mergeable_alternatives{ $lhs } =
@@ -334,7 +333,7 @@ sub symbols{
             my ($ast) = @_;
             # symbol is a statement ...
             return 1 unless $ast->id eq 'statement';
-            # having no symbol name or bracketed name alternatives
+            # having no 'bare name' or 'bracketed name' alternatives
             my @symbols = grep { exists $symbol_name{$_->id()} }
                     @{ $ast->child(1)->children() };
             return @symbols > 0; # skip non-symbols
@@ -380,7 +379,7 @@ sub replace_symbols{
                     if ($id eq 'bare name' or $id eq 'bracketed name'){
                         my $symbol = $alternative->first_child();
                         if (exists $symbols{ $symbol } ){
-#                            warn "# $ix-th child '$symbol' needs replacing:\n", $ast->[2]->[$ix+1]->sprint;
+#                            warn "# $ix-th alternative '$symbol' needs replacing:\n", $ast->[2]->[$ix+1]->sprint;
                             splice(@{ $ast->[2] }, $ix + 1, 1, @{ $symbols{ $symbol } });
                             $removable_symbols->{ $symbol }++;
                         }
@@ -407,9 +406,9 @@ sub replace_symbols{
 
     find recursive statements and translate them to regex syntax
 
-    A statement is recursive if one or more alternatives contain symbols,
-    which are the same as lhs; recursive statement must become
-    a named capture group (?<$lhs>...) and references to it in alternatives
+    A statement is recursive if one or more its alternatives contain symbols,
+    which are the same as its lhs; recursive statement must become
+    a named capture group (?<$lhs>...) and references to it in its alternatives
     must become (?&$lhs) recurses into that group.
 
 =cut
@@ -419,7 +418,7 @@ sub recurse{
     my $recursive_statements = $ast->children(
         sub{
             my ($statement) = @_;
-#            warn $statement->sprint;
+#            warn "# recurse:\n", $statement->sprint;
         }
     );
     return $ast;
