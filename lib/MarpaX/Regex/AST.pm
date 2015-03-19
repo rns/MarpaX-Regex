@@ -112,6 +112,24 @@ sub children{
     return \@children;
 }
 
+# remove children for which $remove sub returns a true value
+sub remove_children{
+    my ($ast, $remove) = @_;
+
+    croak "Arg 2 must be set to code ref." unless defined $remove;
+    croak "Arg 2 must be a ref to CODE, not " . ref $remove unless ref $remove eq "CODE";
+
+    my ($node_id, @children) = @$ast;
+    my @new_children;
+    for my $child (@children){
+        next if $remove->($child);
+        push @new_children, $child;
+    }
+    $ast->children(\@new_children);
+
+    return $ast;
+}
+
 sub _assert_options{
     my ($opts, $spec) = @_;
 
@@ -239,7 +257,7 @@ sub concat{
 }
 
 # merge statement nodes having the same lhs with alternation '|'
-# into the first occurrence of such statement and delete other occurrences
+# into the first occurrence of such statement and remove other occurrences
 sub merge{
     my ($ast) = @_;
 
@@ -276,7 +294,7 @@ sub merge{
 #    warn $mergeable_alternatives{$_}->sprint for keys %mergeable_alternatives;
 
     # replace first occurrence of mergeable alternatives' lhs
-    # with merged alternatives, mark all other occurrences for deletion
+    # with merged alternatives, mark all other occurrences for removal
     # by setting them to undef
     $opts = {
         visit => sub {
@@ -290,8 +308,8 @@ sub merge{
                         $mergeable_alternatives{ $lhs } = undef;
                     }
                     else{
-                        # mark for deletion
-                        $ast->child( 1, MarpaX::Regex::AST->new( '#deletable' ) );
+                        # mark for removal
+                        $ast->child( 1, MarpaX::Regex::AST->new( '#removable' ) );
                     }
                 }
             }
@@ -299,22 +317,8 @@ sub merge{
     }; ## opts
     $ast->walk( $opts );
 
-    # delete statements whose alternatives have been just marked for deletetion
-    $ast->walk( {
-        visit => sub {
-            my ($ast) = @_;
-            my ($node_id, @children) = @$ast;
-            if ($node_id eq 'statements'){
-                my @new_children;
-                for my $statement (@children){
-                    next if $statement->child(1)->id eq '#deletable';
-#                    warn "# kept";
-                    push @new_children, $statement;
-                }
-                $ast->children(\@new_children);
-            }
-        }
-    } );
+    # remove statements whose alternatives have been just marked
+    $ast->remove_children(sub{ $_[0]->child(1)->id eq '#removable' });
 
     return $ast;
 }
