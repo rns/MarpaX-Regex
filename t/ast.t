@@ -99,13 +99,13 @@ for my $test (@$tests){
     ok !$@, 'Regex BNF parsed';
 
     my $regex = MarpaX::Regex::AST->new( $value )
-        ->distill()
-            ->substitute()
-              ->recurse()
-                ->concat();
+                ->distill()
+                  ->substitute()
+                    ->recurse()
+                      ->concat();
 
     diag "BNF:\n$source";
-    eq_or_diff $regex, $expected_regex, "distill()->substitute()->concat(), $desc";
+    eq_or_diff $regex, $expected_regex, "distill()->substitute()->recurse()->concat(), $desc";
     diag "regex:\n $regex";
 
 } ## for my $test (@$tests) ...

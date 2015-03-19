@@ -51,36 +51,21 @@ sub id{
 
 # set the child at index $ix if caller provides it,
 # if $child is an array ref
-#   if @$child is empty, delete child at inde $ix
 #   else replace child with @$child
-#
 # return the child at index $ix
 sub child{
     my ($ast, $ix, $child) = @_;
-    if (defined $ix and defined $child){
-        if (ref $child eq "ARRAY"){
-            if (@$child == 0){
-                splice(@$ast, $ix, 1);
-            }
-            else{
-                splice(@$ast, $ix, 1, @$child);
-            }
-        }
-        else{
-            $ast->[$ix + 1] = $child;
-        }
-    }
     return $ast->[$ix + 1];
 }
 
-# set first child if caller provides it,
-# return the first child
+# set first child if the caller provides it,
+# return the first child that matches $predicate if arg 1 is a code ref
 sub first_child{
     my ($ast, $child) = @_;
     return $ast->child(0, $child);
 }
 
-# append last child if caller provides it,
+# append $child to children
 # return the last child
 sub append_child{
     my ($ast, $child) = @_;
@@ -387,7 +372,7 @@ sub replace_symbols{
     }; ## opts
     $ast->walk( $opts );
 
-    warn "# after symbol replacement before deletion:\n", $ast->dump;
+#    warn "# after symbol replacement before deletion:\n", $ast->dump;
 
     # todo: symbol deletion is broken! use skip and rebuild the tree
 
@@ -433,7 +418,7 @@ sub recurse{
     my $recursive_statements = $ast->children(
         sub{
             my ($statement) = @_;
-            warn $statement->sprint if defined $statement;
+#            warn $statement->sprint;
         }
     );
     return $ast;
