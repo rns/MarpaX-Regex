@@ -222,7 +222,7 @@ sub concat{
                 $s .= "(?#$lhs)";
             }
         }
-        elsif (@children == 1 and not ref $children[0]){
+        elsif ($ast->is_literal){
             $s .= qq{$children[0]};
         }
 
@@ -492,7 +492,7 @@ sub distill{
             }
             # child nodes; #text nodes will also be added here
             # so we don't care about <quantifier modifier>'s (yet)
-            elsif (@children == 1 and not ref $children[0]){
+            elsif ($ast->is_literal){
                 $parent->append_child( MarpaX::Regex::AST->new( $ast ) );
             }
             else{
