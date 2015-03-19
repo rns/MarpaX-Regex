@@ -242,7 +242,7 @@ sub merge{
     my %alternatives_by_lhs;
     my $opts = {
         visit => sub {
-            my ($ast, $context) = @_;
+            my ($ast) = @_;
             if ($ast->id eq 'statement'){
                 my $lhs          = $ast->descendant(2)->first_child();
                 my $alternatives = $ast->child(1);
@@ -274,10 +274,9 @@ sub merge{
     # with merged alternatives
     $opts = {
         visit => sub {
-            my ($ast, $context) = @_;
-            my ($node_id, @children) = @$ast;
-            if ($node_id eq 'statement'){
-                my $lhs = $children[0]->[1]->[1];
+            my ($ast) = @_;
+            if ($ast->id eq 'statement'){
+                my $lhs = $ast->descendant(2)->first_child();
                 if ( exists $mergeable_alternatives{ $lhs } ){
                     if (defined $mergeable_alternatives{ $lhs }){
 #                        warn "# first occurrence of $lhs:\n", $ast->[2]->sprint;
@@ -297,7 +296,7 @@ sub merge{
     # the first
     $opts = {
         visit => sub {
-            my ($ast, $context) = @_;
+            my ($ast) = @_;
             my ($node_id, @children) = @$ast;
             if ($node_id eq 'statements'){
                 my @new_children;
@@ -325,7 +324,7 @@ sub symbols{
     my @symbols;
     my $opts = {
         skip => sub {
-            my ($ast, $context) = @_;
+            my ($ast) = @_;
             # symbol is a statement ...
             return 1 unless $ast->id eq 'statement';
             # having no symbol name or bracketed name alternatives
@@ -334,7 +333,7 @@ sub symbols{
             return @symbols > 0; # skip non-symbols
         },
         visit => sub {
-            my ($ast, $context) = @_;
+            my ($ast) = @_;
             push @symbols, $ast;
         }
     }; ## opts
@@ -360,7 +359,7 @@ sub replace_symbols{
     my $deletable_symbols = {};
     my $opts = {
         visit => sub {
-            my ($ast, $context) = @_;
+            my ($ast) = @_;
             if ($ast->id eq 'statement'){
                 my $lhs = $ast->descendant(2)->first_child();
 #                    warn "#stat $lhs: ", $ast->sprint;
@@ -390,7 +389,7 @@ sub replace_symbols{
     # delete symbols statements we've just replaced
     $opts = {
         visit => sub {
-            my ($ast, $context) = @_;
+            my ($ast) = @_;
             my ($node_id, @children) = @$ast;
             if ($node_id eq 'statements'){
 #                warn "# checking for deletion stats:\n", Dumper $ast;
@@ -464,7 +463,7 @@ sub distill{
 
     my $opts = {
         skip => sub {
-            my ($ast, $context) = @_;
+            my ($ast) = @_;
             my ($node_id, @children) = @$ast;
             state $node_skip_list = { map { $_ => 1 } (
                 'group', 'primary',
@@ -475,7 +474,7 @@ sub distill{
             return exists $node_skip_list->{ $node_id }
         },
         visit => sub {
-            my ($ast, $context) = @_;
+            my ($ast) = @_;
             my ($node_id, @children) = @$ast;
             # parent nodes
             if ($node_id eq 'statements'){
