@@ -355,7 +355,7 @@ sub replace_symbols{
 
     my %symbols;
     for my $t (@$symbols){
-        my $t_lhs = $t->first_child->first_child->first_child;
+        my $t_lhs = $t->descendant(2)->first_child;
         my $t_alternatives = $t->child(1)->children;
 #        warn Dumper $t_alternatives;
 #        warn "# replacing $t_lhs:\n", $t->sprint;
@@ -363,7 +363,7 @@ sub replace_symbols{
     }
 
     # symbol must be deleted if it's been used in replacement at least once
-    my $deletable_symbols = {};
+    my $removable_symbols = {};
     my $opts = {
         visit => sub {
             my ($ast) = @_;
@@ -382,7 +382,7 @@ sub replace_symbols{
                         if (exists $symbols{ $symbol } ){
 #                            warn "# $ix-th child '$symbol' needs replacing:\n", $ast->[2]->[$ix+1]->sprint;
                             splice(@{ $ast->[2] }, $ix + 1, 1, @{ $symbols{ $symbol } });
-                            $deletable_symbols->{ $symbol }++;
+                            $removable_symbols->{ $symbol }++;
                         }
                     }
                 }
@@ -403,7 +403,7 @@ sub replace_symbols{
                 my @new_children;
                 for my $statement (@children){
 #                    warn "# checking for deletion stat:\n", $statement->sprint;
-                    next if exists $deletable_symbols->{ $statement->first_child->first_child->first_child };
+                    next if exists $removable_symbols->{ $statement->descendant(2)->first_child };
 #                    warn "# kept";
                     push @new_children, $statement;
                 }
@@ -415,7 +415,7 @@ sub replace_symbols{
 
 #    warn "# After deletion:\n", $ast->dump;
 
-    return %$deletable_symbols ? 1 : 0;
+    return %$removable_symbols ? 1 : 0;
 }
 
 =head2
