@@ -49,11 +49,17 @@ sub id{
     return $ast->[0];
 }
 
-# return true if the node is literal node
+# return true if the node is literal node -- [ 'name', 'value' ]
 sub is_literal{
     my ($ast) = @_;
     my ($node_id, @children) = @{ $ast };
     return ( (@children == 1) and (not ref $children[0]) );
+}
+
+sub descendant{
+    my ($ast, $level) = @_;
+    $ast = $ast->[1] for (1..$level);
+    return $ast;
 }
 
 # set the child at index $ix if caller provides it,
@@ -154,8 +160,8 @@ sub do_walk{
     }
 
     my ($node_id, @children) = @{ $ast };
-    # don't walk into literal [ 'name', 'value' ] nodes
-    unless ($ast->is_literal()){ # @children == 1 and not ref $children[0]
+    # don't walk into [ 'name', 'value' ] nodes
+    unless ( $ast->is_literal ){
         # todo: set siblings and parents for context
         do_walk( $_, $opts  ) for @children;
     }
@@ -237,9 +243,9 @@ sub merge{
     my $opts = {
         visit => sub {
             my ($ast, $context) = @_;
-            my ($node_id, @children) = @$ast;
-            if ($node_id eq 'statement'){
-                my ($lhs, $alternatives) = ( $children[0]->[1]->[1], $children[1] );
+            if ($ast->id eq 'statement'){
+                my $lhs          = $ast->descendant(2)->first_child();
+                my $alternatives = $ast->child(1);
                 push @{ $alternatives_by_lhs{ $lhs } }, $alternatives ;
             }
         }
@@ -356,7 +362,7 @@ sub replace_symbols{
         visit => sub {
             my ($ast, $context) = @_;
             if ($ast->id eq 'statement'){
-                my $lhs = $ast->[1]->[1]->[1];
+                my $lhs = $ast->descendant(2)->first_child();
 #                    warn "#stat $lhs: ", $ast->sprint;
                 return if exists $symbols{ $lhs }; # don't replace itself
                 my $alternatives = $ast->child(1)->children;
