@@ -88,9 +88,19 @@ sub first_child{
     return $ast->child(0, $child);
 }
 
+# set last child if the caller provides it,
+# return the last child that matches $predicate if arg 1 is a code ref
 sub last_child{
     my ($ast, $child) = @_;
     return $ast->child(-1, $child);
+}
+
+# insert $child at position just before $ix
+# return splice() return value
+sub insert_before_child{
+    my ($ast, $ix, $child) = @_;
+    $ix++ if $ix == 0; # a node is an array and children start at position 1
+    return splice @$ast, $ix, 0, $child;
 }
 
 # append $child to children
@@ -473,7 +483,7 @@ sub recurse{
                     my $id = $alternative->id;
                     if ($id eq 'bare name' or $id eq 'bracketed name'){
                         if ( $alternative->first_child eq $lhs ){
-                            warn "recursion: $lhs";
+#                            warn "recursion: $lhs";
                             $lhs = regex_name ($lhs);
                             $alternatives->child($ix,
                                 MarpaX::Regex::AST->new ( [ '#text', "(?&$lhs)" ] ) );
@@ -481,43 +491,33 @@ sub recurse{
                         }
                     }
                 }
-                warn $count;
+#                warn $count;
                 # recursions are found and references are prepared;
                 # now, set up the named capture group to recurse to
                 if ( $count > 0 ){
-                    # if $alternatives is an unnamed capture group
+                    # if $alternatives is an capture group
+                    # (unnamed, we don't support named capture groups yet)
                     if (
                             $alternatives->first_child->is_literal
                         and $alternatives->last_child->is_literal
                         and $alternatives->first_child->first_child eq '('
                         and $alternatives->last_child->first_child eq ')'
                     ){
-                        warn "unnamed capture group";
+#                        warn "capture group";
+                        $alternatives->first_child(
+                            MarpaX::Regex::AST->new ( [ '#text', "(?<$lhs>" ] ) );
                     }
                     # wrap $alternatives to a named capture group to recurse to
                     else{
-                        warn "named capture group";
+#                        warn "not a capture group";
+                        # insert_before_child
+                        $alternatives->insert_before_child ( 0,
+                            MarpaX::Regex::AST->new ( [ '#text', "(?<$lhs>" ] ) );
+                        $alternatives->append_child(
+                            MarpaX::Regex::AST->new ( [ '#text', ")" ] ) );
                     }
                 }
-=pod
-
-    for each alternative with $lhs as bare or bracketed name
-        set it to [ '#text', "(?&$lhs)" ]
-        $count++
-    if $count > 0 such alternatives
-        if $alternatives is an unnamed capture group child(0) is '(' and child(-1) is ')'
-            replace first [ '#text', '(' ]
-            with          [ '#text', '(?$lhs' ]
-        else
-            make alternatives a named capture group by wrapping them in
-                [ '#text', '(?$lhs' ]
-                ...
-                [ '#text', ')' ]
-
-        (or set it to [ '#text', '' ] )
-
-=cut
-                # remove $lhs:
+                # remove $lhs: pretty printing will be handled differently
                 $ast->remove_child(0);
             }
         }

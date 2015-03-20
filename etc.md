@@ -40,6 +40,16 @@ Priorities
     Currently NAME is restricted to simple identifiers only.  In other words, it must match "/^[_A-Za-z][_A-Za-z0-9]*\z/" or its Unicode extension (see utf8), though it is not extended by the locale (see perllocale).
 
   pretty-printing and commenting
+    = e.g. for angle brackets:
+        (?<balanced_brackets>
+            <
+                (?:
+                    [^<>]++
+                        |
+                    (?&balanced_brackets)
+                )*
+            >
+        )
 
   assertions
 
@@ -58,6 +68,12 @@ Priorities
     parent/child pairs
 
 = ast
+
+  $ast->child(ast->IX_BEFORE_FIRST, $child);
+  $ast->child(ast->IX_AFTER_LAST, $child);
+  $ast->child(sub{ $_->[0] eq 'bracketed name' }, $child);
+  my ($child, $ix) = $ast->child( sub{ $_->[0] eq 'bracketed name' } );
+  my (undef, $ix) = $ast->child( sub{ $_->[0] eq 'bracketed name' } );
   
   iterator
     selector
