@@ -31,8 +31,12 @@ Priorities
   recursion
 
 =====the=above=are=done=====
+
+  more test cases
+    http://www.perl.com/pub/2003/06/06/regexps.html -- cozens
+    http://blog.stevenlevithan.com/archives/regex-recursion
   
-  support symbol expansion in character classes
+  ? support symbol expansion in character classes
 
   escaped metacharacters in literals and charclasses
     like <character class character>
