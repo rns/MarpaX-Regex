@@ -98,14 +98,24 @@ lexeme default = action => [ name, values ] latm => 1
 };
 
 sub new {
-    my $class = shift;
+    my ($class, $source) = @_;
 
     my $self = {};
-
     my $slg = Marpa::R2::Scanless::G->new( { source => \$dsl } );
     $self->{slg} = $slg;
 
     bless $self, $class;
+
+    if ( defined $source ){
+        my $ast = eval { $self->parse($source) };
+        if ($@){
+            warn "# Parse failure:\n" . $self->parse_debug($source);
+            return;
+        }
+        return $self->translate( $ast );
+    }
+
+    return $self;
 }
 
 sub parse{

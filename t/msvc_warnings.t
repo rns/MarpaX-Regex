@@ -33,13 +33,7 @@ my $expected = [
 MarpaX::Regex->new($source);
 
 # must parse unambiguously unless parse error is expected
-my $rex = MarpaX::Regex->new;
-my $value = eval { $rex->parse($source) };
-ok !$@, 'Regex BNF parsed';
-
-my $ast = MarpaX::Regex::AST->new($value);
-
-my $regex = $ast->distill->substitute->recurse->concat;
+my $regex = MarpaX::Regex->new($source);
 chomp $regex;
 diag $regex unless $ENV{HARNESS_ACTIVE};
 
