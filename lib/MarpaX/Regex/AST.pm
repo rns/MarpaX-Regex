@@ -498,8 +498,6 @@ sub recurse{
                     else{
                         warn "named capture group";
                     }
-                # remove lhs
-                $ast->remove_child(0);
                 }
 =pod
 
@@ -519,6 +517,8 @@ sub recurse{
         (or set it to [ '#text', '' ] )
 
 =cut
+                # remove $lhs:
+                $ast->remove_child(0);
             }
         }
     };
