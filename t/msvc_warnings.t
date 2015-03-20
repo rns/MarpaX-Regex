@@ -34,7 +34,7 @@ MarpaX::Regex->new($source);
 
 # must parse unambiguously unless parse error is expected
 my $regex = MarpaX::Regex->new($source);
-chomp $regex;
+chomp $regex; # no extended patterns this time
 diag $regex unless $ENV{HARNESS_ACTIVE};
 
 my $ln = 0;

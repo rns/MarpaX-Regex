@@ -282,7 +282,7 @@ sub concat{
             }
         }
         elsif ($ast->is_literal){
-            $s .= qq{$children[0]};
+            $s .= $children[0];
         }
 
     };

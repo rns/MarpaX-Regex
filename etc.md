@@ -26,21 +26,26 @@ Syntax
 Priorities
 ----------
 
+  NO generalized recursion -- cannot differentiate from symbol expansion
+    alternative is to convert all to capture groups that feels plain ugly
+    references to lhs of other statements
+    e.g. json parser by Randall Swartz
+
+  NO quotemeta on literals -- quoting is left to application
+    in concat()
+
+=====the=above=are=done=by=saying=NO=to=them===
+
   symbol expansion
   explicit non-capturing parens (?: ...)
   recursion
 
-=====the=above=are=done=====
-  
-  quotemeta on literals
-  
   coerce symbol names to REs
     Currently NAME is restricted to simple identifiers only.  In other words, it must match "/^[_A-Za-z][_A-Za-z0-9]*\z/" or its Unicode extension (see utf8), though it is not extended by the locale (see perllocale).
+    private method regex_name() does it
 
-  generalized recursion 
-    references to lhs of other statements
-    e.g. json parser by Randall Swartz
-    
+=====the=above=are=done=====
+  
   more test cases
     http://www.perl.com/pub/2003/06/06/regexps.html -- cozens
     http://blog.stevenlevithan.com/archives/regex-recursion
