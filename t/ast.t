@@ -106,7 +106,7 @@ for my $test (@$tests){
 
     diag "BNF:\n$source";
     eq_or_diff $regex, $expected_regex, "distill()->substitute()->recurse()->concat(), $desc";
-    diag "regex:\n $regex";
+    diag "regex:$regex";
 
 } ## for my $test (@$tests) ...
 

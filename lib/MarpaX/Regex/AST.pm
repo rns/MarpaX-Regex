@@ -64,7 +64,7 @@ sub descendant{
 
 # set the child at index $ix if caller provides it,
 # if Arg3 is an array ref, use splice
-# to replace child at $ix with Arg3's contents
+# to expand child at $ix with Arg3's contents
 # return the child at index $ix
 sub child{
     my ($ast, $ix, $child) = @_;
@@ -299,7 +299,7 @@ sub merge{
     }
 #    warn $mergeable_alternatives{$_}->sprint for keys %mergeable_alternatives;
 
-    # replace first occurrence of mergeable alternatives' lhs
+    # expand first occurrence of mergeable alternatives' lhs
     # with merged alternatives, mark all other occurrences for removal
     # by setting them to undef
     $opts = {
@@ -355,8 +355,8 @@ sub symbols{
     return @symbols > 0 ? \@symbols : undef;
 }
 
-# replace occurrences of symbol's name with symbol's alternatives
-sub replace_symbols{
+# expand occurrences of symbol's name with symbol's alternatives
+sub expand_symbols{
     my ($ast, $symbols) = @_;
 
     my %symbols;
@@ -364,11 +364,11 @@ sub replace_symbols{
         my $symbol_lhs = $symbol->descendant(2)->first_child;
         my $symbol_alternatives = $symbol->child(1)->children;
 #        warn Dumper $symbol_alternatives;
-#        warn "# replacing $symbol_lhs:\n", $symbol->sprint;
+#        warn "# to be expanded: $symbol_lhs:\n", $symbol->sprint;
         $symbols{$symbol_lhs} = $symbol_alternatives;
     }
 
-    # symbol must be removed if it's been used in replacement at least once
+    # symbol must be removed if it's been used in expansion at least once
     my $removable_symbols = {};
     my $opts = {
         visit => sub {
@@ -376,7 +376,7 @@ sub replace_symbols{
             if ($ast->id eq 'statement'){
                 my $lhs = $ast->descendant(2)->first_child();
 #                warn "#stat $lhs:\n", $ast->dump;
-                return if exists $symbols{ $lhs }; # don't replace itself
+                return if exists $symbols{ $lhs }; # don't expand itself
                 my $alternatives = $ast->child(1)->children;
                 # in reverse order to splice() from the end
                 for (my $ix = @$alternatives - 1; $ix >= 0; $ix--){
@@ -386,7 +386,7 @@ sub replace_symbols{
                     if ($id eq 'bare name' or $id eq 'bracketed name'){
                         my $symbol = $alternative->first_child();
                         if (exists $symbols{ $symbol } ){
-#                            warn "# $ix-th alternative '$symbol' needs replacing:\n", $ast->[2]->[$ix+1]->sprint;
+#                            warn "# $ix-th alternative '$symbol' needs expanding:\n", $ast->[2]->[$ix+1]->sprint;
                             $ast->child(1)->child ( $ix, $symbols{ $symbol } );
                             $removable_symbols->{ $symbol }++;
                         }
@@ -397,9 +397,9 @@ sub replace_symbols{
     }; ## opts
     $ast->walk( $opts );
 
-#    warn "# after symbol replacement before removal:\n", $ast->dump;
+#    warn "# after symbol expansion before removal:\n", $ast->dump;
 
-    # remove symbols statements we've just replaced
+    # remove symbols statements we've just expandd
     $ast->remove_children(sub{
         exists $removable_symbols->{ $_[0]->descendant(2)->first_child }
     });
@@ -425,7 +425,8 @@ sub recurse{
     my $recursive_statements = $ast->children(
         sub{
             my ($statement) = @_;
-#            warn "# recurse:\n", $statement->sprint;
+            warn "# recurse:\n", $statement->sprint;
+            my $lhs = $statement->des
         }
     );
     return $ast;
@@ -438,13 +439,13 @@ sub substitute{
 
     $ast->merge();
 
-#    warn "# with NO symbols replaced:\n", $ast->sprint;
+#    warn "# with NO symbols expandd:\n", $ast->sprint;
 
     while (1){
         my $symbols = $ast->symbols();
 #        warn $_->sprint for @$symbols;
-        last if not $ast->replace_symbols($symbols);
-#        warn "# with symbols replaced:\n", $ast->sprint;
+        last if not $ast->expand_symbols($symbols);
+#        warn "# with symbols expandd:\n", $ast->sprint;
     }
 
     return $ast;

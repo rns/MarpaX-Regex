@@ -100,6 +100,7 @@ my $value = eval { $rex->parse($BNFish) };
 ok !$@, 'Regex BNF parsed';
 
 my $ast = MarpaX::Regex::AST->new($value);
-$ast = $ast->distill->substitute;
+my $regex = $ast->distill->substitute->recurse->concat;
+diag $regex;
 
 done_testing();
