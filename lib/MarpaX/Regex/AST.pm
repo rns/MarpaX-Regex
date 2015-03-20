@@ -123,7 +123,7 @@ sub children{
 sub remove_children{
     my ($ast, $remove) = @_;
 
-    croak "Arg 2 must be set to code ref." unless defined $remove;
+    croak "Arg 2 must be defined as a CODE ref." unless defined $remove;
     croak "Arg 2 must be a ref to CODE, not " . ref $remove unless ref $remove eq "CODE";
 
     my ($node_id, @children) = @$ast;
@@ -135,6 +135,14 @@ sub remove_children{
     $ast->children(\@new_children);
 
     return $ast;
+}
+
+# remove child at $ix
+# return removed child
+sub remove_child{
+    my ($ast, $ix) = @_;
+    croak "Arg 2 must be defined as an index of the child to be removed." unless defined $ix;
+    return splice ( @$ast, $ix + 1, 1 );
 }
 
 sub _assert_options{
@@ -422,13 +430,38 @@ sub expand_symbols{
 
 sub recurse{
     my ($ast) = @_;
-    my $recursive_statements = $ast->children(
-        sub{
-            my ($statement) = @_;
-            warn "# recurse:\n", $statement->sprint;
-            my $lhs = $statement->des
+
+    my $opts = {
+        visit => sub{
+            my ($ast) = @_;
+            if ($ast->id eq 'statement'){
+#                warn "# recurse:\n", $ast->sprint;
+                my $lhs = $ast->descendant(2)->first_child();
+                my $alternatives = $ast->child(1);
+=pod
+
+    for each alternative with $lhs as bare or bracketed name
+        set it to [ '#text', "(?&$lhs)" ]
+        $count++
+    if $count > 0 such alternatives
+        if $alternatives is an unnamed capture group child(0) is '(' and child(-1) is ')'
+            replace first [ '#text', '(' ]
+            with          [ '#text', '(?$lhs' ]
+        else
+            make alternatives a named capture group by wrapping them in
+                [ '#text', '(?$lhs' ]
+                ...
+                [ '#text', ')' ]
+
+        remove lhs (or set it to [ '#text', '' ] )
+
+=cut
+                $ast->remove_child(0);
+            }
         }
-    );
+    };
+    $ast->walk($opts);
+
     return $ast;
 }
 

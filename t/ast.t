@@ -50,7 +50,7 @@ my $tests = [
     twenty   ::= '20'
 },
 q{
-(?#s)(19|20|)\d\d
+(19|20|)\d\d
 },
 'grouping, years' ],
 # /^[+-]?(\d+\.\d+|\d+\.|\.\d+|\d+)([eE][+-]?\d+)?$/
@@ -65,7 +65,7 @@ q{
     digit               ::= \d
 },
 q{
-(?#number)^([+-]?)(\d+.\d+|\d+.|.\d+|\d+)(([eE][+-]?\d+)?)$
+^([+-]?)(\d+.\d+|\d+.|.\d+|\d+)(([eE][+-]?\d+)?)$
 },
 'building a regexp, unfactored form' ],
 # /^[+-]?(\d+\.\d+|\d+\.|\.\d+|\d+)([eE][+-]?\d+)?$/
@@ -80,7 +80,7 @@ q{
     digit               ::= \d
 },
 q{
-(?#number)^([+-]?)(\d+.\d+|.\d+|\d+.|\d+)(([eE][+-]?\d+)?)$
+^([+-]?)(\d+.\d+|.\d+|\d+.|\d+)(([eE][+-]?\d+)?)$
 },
 'building a regexp, unfactored form, more dispered same-lhs statements' ],
 
@@ -90,8 +90,8 @@ for my $test (@$tests){
 
     my ($source, $expected_regex, $desc) = @$test;
 
-    $source =~ s/^\s+|\s+$//g;
-#    $ast_str =~ s/^\n+//g;
+    $source =~ s/^\s+|\s+$//gms;
+    $expected_regex =~ s/^\s+//gms;
 
     # must parse unambiguously unless parse error is expected
     my $rex = MarpaX::Regex->new;
@@ -106,7 +106,7 @@ for my $test (@$tests){
 
     diag "BNF:\n$source";
     eq_or_diff $regex, $expected_regex, "distill()->substitute()->recurse()->concat(), $desc";
-    diag "regex:$regex";
+    diag "regex: $regex";
 
 } ## for my $test (@$tests) ...
 
