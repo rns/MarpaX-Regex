@@ -422,6 +422,23 @@ sub expand_symbols{
     return %$removable_symbols ? 1 : 0;
 }
 
+=pod
+
+  coerce symbol names to REs
+    Currently NAME is restricted to simple identifiers only.  In other words, it must match "/^[_A-Za-z][_A-Za-z0-9]*\z/" or its Unicode extension (see utf8), though it is not extended by the locale (see perllocale).
+
+    remove angle brackets if $lhs is wrapped in them
+    replace ' ' and - to _
+
+=cut
+
+sub regex_name{
+    my ($lhs) = @_;
+    $lhs =~ s/ |-/_/g;
+    $lhs =~ s/^<|>$//g;
+    return $lhs;
+}
+
 =head2
 
     find recursive statements and translate them to regex syntax
@@ -451,9 +468,14 @@ sub recurse{
                     if ($id eq 'bare name' or $id eq 'bracketed name'){
                         if ( $alternative->first_child eq $lhs ){
                             warn "recursion: $lhs";
+                            $lhs = regex_name ($lhs);
+                            $alternatives->child($ix,
+                                MarpaX::Regex::AST->new ( [ '#text', "(?&$lhs)" ] ) );
                             $count++;
                         }
                     }
+                }
+                if ( $count > 0 ){
                 }
                 warn $count;
 =pod

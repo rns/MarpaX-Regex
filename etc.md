@@ -58,7 +58,13 @@ Priorities
     parent/child pairs
 
 = ast
-
+  
+  iterator
+    selector
+    action
+    modifying 
+    non-modidying -- reverse
+  
   id()   
   child(index_or_predicate)
     first_child()
