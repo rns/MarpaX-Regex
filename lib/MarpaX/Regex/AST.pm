@@ -68,16 +68,17 @@ sub descendant{
 # return the child at index $ix
 sub child{
     my ($ast, $ix, $child) = @_;
+    $ix++ unless $ix == -1;
     if (defined $child){
         if (ref $child eq "ARRAY"){
-            splice @$ast, $ix + 1, 1, @$child;
+            splice @$ast, $ix, 1, @$child;
         }
         else{
             croak "Child must be a ref to " . __PACKAGE__ unless ref $child eq __PACKAGE__;
-            $ast->[$ix + 1] = $child;
+            $ast->[$ix] = $child;
         }
     }
-    return $ast->[$ix + 1];
+    return $ast->[$ix];
 }
 
 # set first child if the caller provides it,
@@ -85,6 +86,11 @@ sub child{
 sub first_child{
     my ($ast, $child) = @_;
     return $ast->child(0, $child);
+}
+
+sub last_child{
+    my ($ast, $child) = @_;
+    return $ast->child(-1, $child);
 }
 
 # append $child to children
@@ -475,9 +481,26 @@ sub recurse{
                         }
                     }
                 }
-                if ( $count > 0 ){
-                }
                 warn $count;
+                # recursions are found and references are prepared;
+                # now, set up the named capture group to recurse to
+                if ( $count > 0 ){
+                    # if $alternatives is an unnamed capture group
+                    if (
+                            $alternatives->first_child->is_literal
+                        and $alternatives->last_child->is_literal
+                        and $alternatives->first_child->first_child eq '('
+                        and $alternatives->last_child->first_child eq ')'
+                    ){
+                        warn "unnamed capture group";
+                    }
+                    # wrap $alternatives to a named capture group to recurse to
+                    else{
+                        warn "named capture group";
+                    }
+                # remove lhs
+                $ast->remove_child(0);
+                }
 =pod
 
     for each alternative with $lhs as bare or bracketed name
@@ -493,10 +516,9 @@ sub recurse{
                 ...
                 [ '#text', ')' ]
 
-        remove lhs (or set it to [ '#text', '' ] )
+        (or set it to [ '#text', '' ] )
 
 =cut
-                $ast->remove_child(0);
             }
         }
     };
