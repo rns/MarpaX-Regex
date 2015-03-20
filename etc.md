@@ -28,10 +28,11 @@ Priorities
 
   symbol expansion
   explicit non-capturing parens (?: ...)
+  recursion
 
 =====the=above=are=done=====
   
-  recursion
+  support symbol expansion in character classes
 
   escaped metacharacters in literals and charclasses
     like <character class character>
