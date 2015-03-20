@@ -63,12 +63,19 @@ sub descendant{
 }
 
 # set the child at index $ix if caller provides it,
+# if Arg3 is an array ref, use splice
+# to replace child at $ix with Arg3's contents
 # return the child at index $ix
 sub child{
     my ($ast, $ix, $child) = @_;
     if (defined $child){
-        croak "Child must be a ref to " . __PACKAGE__ unless ref $child eq __PACKAGE__;
-        $ast->[$ix + 1] = $child;
+        if (ref $child eq "ARRAY"){
+            splice @$ast, $ix + 1, 1, @$child;
+        }
+        else{
+            croak "Child must be a ref to " . __PACKAGE__ unless ref $child eq __PACKAGE__;
+            $ast->[$ix + 1] = $child;
+        }
     }
     return $ast->[$ix + 1];
 }
@@ -368,7 +375,7 @@ sub replace_symbols{
             my ($ast) = @_;
             if ($ast->id eq 'statement'){
                 my $lhs = $ast->descendant(2)->first_child();
-#                    warn "#stat $lhs: ", $ast->sprint;
+#                warn "#stat $lhs:\n", $ast->dump;
                 return if exists $symbols{ $lhs }; # don't replace itself
                 my $alternatives = $ast->child(1)->children;
                 # in reverse order to splice() from the end
@@ -380,7 +387,7 @@ sub replace_symbols{
                         my $symbol = $alternative->first_child();
                         if (exists $symbols{ $symbol } ){
 #                            warn "# $ix-th alternative '$symbol' needs replacing:\n", $ast->[2]->[$ix+1]->sprint;
-                            splice(@{ $ast->[2] }, $ix + 1, 1, @{ $symbols{ $symbol } });
+                            $ast->child(1)->child ( $ix, $symbols{ $symbol } );
                             $removable_symbols->{ $symbol }++;
                         }
                     }
