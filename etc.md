@@ -31,7 +31,16 @@ Priorities
   recursion
 
 =====the=above=are=done=====
+  
+  quotemeta on literals
+  
+  coerce symbol names to REs
+    Currently NAME is restricted to simple identifiers only.  In other words, it must match "/^[_A-Za-z][_A-Za-z0-9]*\z/" or its Unicode extension (see utf8), though it is not extended by the locale (see perllocale).
 
+  generalized recursion 
+    references to lhs of other statements
+    e.g. json parser by Randall Swartz
+    
   more test cases
     http://www.perl.com/pub/2003/06/06/regexps.html -- cozens
     http://blog.stevenlevithan.com/archives/regex-recursion
@@ -40,9 +49,6 @@ Priorities
 
   escaped metacharacters in literals and charclasses
     like <character class character>
-
-  coerce symbol names to REs
-    Currently NAME is restricted to simple identifiers only.  In other words, it must match "/^[_A-Za-z][_A-Za-z0-9]*\z/" or its Unicode extension (see utf8), though it is not extended by the locale (see perllocale).
 
   pretty-printing and commenting
     = e.g. for angle brackets:

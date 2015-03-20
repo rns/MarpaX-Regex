@@ -43,7 +43,7 @@ lexeme default = action => [ name, values ] latm => 1
 
     <character class> ::= '[' <character class characters> ']'
     <character class characters> ~ <character class character>+
-    <character class character> ~ [^\]] | '\[' | '\]' | '[:' | ':]'
+    <character class character> ~ [^\]] | '\[' | '\]' # | '[:' | ':]'
 
     # these will be used in named captures so
     # the rules for regexp NAMEs must be obeyed

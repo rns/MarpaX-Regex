@@ -4,12 +4,7 @@ use warnings;
 
 use Test::More;
 
-use Data::Dumper;
-$Data::Dumper::Indent = 1;
-$Data::Dumper::Terse = 1;
-$Data::Dumper::Deepcopy = 1;
-
-use Marpa::R2;
+use MarpaX::Regex;
 
 my $input = <<EOI;
 ../cpan/lib/dev/file.c(11824) : warning C4820: '__unnamed' : '3' bytes padding added after member 'c'
@@ -17,31 +12,40 @@ my $input = <<EOI;
 file.c(12538) : warning C4127: conditional expression is constant
 EOI
 
-my $g = Marpa::R2::Scanless::G->new( {
-source => \(<<'END_OF_SOURCE'),
-:default ::= action => [ name, values ]
-lexeme default = action => [ name, values ] latm => 1
+my $source = q{
 
-    list ::= warning+ separator => [\n]
+    warning ::= (file) '\(' (line) '\)' ' : warning ' (code) ': ' (message) [\n]
 
-    warning ::= file ('(') line (')') (':' 'warning') code (':') message
+    file    ::= [\w\-:\/ \\\.]+    # windows and unix paths
+    line    ::= int
+    code    ::= 'C' int
+    message ::= [\w' \-:]+ #'
+    int     ::= [\d]+
 
-    file    ~ [\w\-:/ \\\.]+    # windows and unix paths
-    line    ~ int
-    code    ~ 'C' int
-    message ~ [\w' \-:]+ #'
-    int     ~ [\d]+
+};
 
-:discard ~ whitespace
-    whitespace ~ [ ]+
+my $expected = [
+    [ '../cpan/lib/dev/file.c', '11824', 'C4820', "'__unnamed' : '3' bytes padding added after member 'c'" ],
+    [ '../cpan/lib/dev/file.c', '12464', 'C4100', "'param' : unreferenced formal parameter" ],
+    [ 'file.c', '12538', 'C4127', 'conditional expression is constant' ]
+];
 
-END_OF_SOURCE
-} );
+MarpaX::Regex->new($source);
 
-my $r = Marpa::R2::Scanless::R->new( { grammar => $g } );
-$r->read(\$input);
+# must parse unambiguously unless parse error is expected
+my $rex = MarpaX::Regex->new;
+my $value = eval { $rex->parse($source) };
+ok !$@, 'Regex BNF parsed';
 
-say Dumper ${ $r->value() };
+my $ast = MarpaX::Regex::AST->new($value);
 
-ok(1);
+my $regex = $ast->distill->substitute->recurse->concat;
+chomp $regex;
+diag $regex unless $ENV{HARNESS_ACTIVE};
+
+my $ln = 0;
+while ($input =~ m/$regex/gc){
+    is_deeply $expected->[$ln++], [ $1, $2, $3, $4 ], "warning $ln match";
+}
+
 done_testing();
