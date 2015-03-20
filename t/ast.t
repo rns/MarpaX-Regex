@@ -104,9 +104,9 @@ for my $test (@$tests){
                     ->recurse()
                       ->concat();
 
-    diag "BNF:\n$source";
+    diag "BNF:\n$source" unless $ENV{HARNESS_ACTIVE};
     eq_or_diff $regex, $expected_regex, "distill()->substitute()->recurse()->concat(), $desc";
-    diag "regex: $regex";
+    diag "regex: $regex" unless $ENV{HARNESS_ACTIVE};
 
 } ## for my $test (@$tests) ...
 

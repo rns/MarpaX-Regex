@@ -229,7 +229,7 @@ for my $test (@$tests){
     my $must_compile = $desc !~ /RE compile error expected/;
 
     $source =~ s/^\s+|\s+$//g;
-    diag "BNF: $source";
+    diag "BNF: $source" unless $ENV{HARNESS_ACTIVE};
 
     # must parse unambiguously unless parse error is expected
     my $rex = MarpaX::Regex->new;
@@ -251,7 +251,7 @@ for my $test (@$tests){
         skip "BNF source parse error", 3 unless defined $ast and $must_parse;
 
         my $re = $rex->translate( $ast );
-        diag "RE: /$re/";
+        diag "RE: /$re/" unless $ENV{HARNESS_ACTIVE};
 
         my $re_compiles;
         { no warnings; $re_compiles = eval { qr/$re/x } };
@@ -267,7 +267,7 @@ for my $test (@$tests){
                 my $exp_list = $expected_list->[$i];
                 my $exp_scalar = $expected_scalar->[$i];
 
-                diag "input $i: $in";
+                diag "input $i: $in" unless $ENV{HARNESS_ACTIVE};
 
                 my $got = $in =~ /$re/x;
                 is $got, $exp_scalar, "$desc: scalar-context match";
