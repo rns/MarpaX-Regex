@@ -47,6 +47,7 @@ Priorities
 =====the=above=are=done=====
   
   more test cases
+    3.22. Construct a Parser -- http://www.regexguru.com/2012/09/regular-expressions-cookbook-code-samples/
     http://www.perl.com/pub/2003/06/06/regexps.html -- cozens
     http://blog.stevenlevithan.com/archives/regex-recursion
   
