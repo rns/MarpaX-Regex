@@ -109,7 +109,7 @@ sub children{
         if (ref $children eq "CODE"){
             my $found = [];
             for my $ix (0..$#children){
-                push @$found, $children[$ix] if $children->( $children[$ix] );
+                push @$found, $children[$ix] if $children->( $children[$ix], $ix );
             }
         }
         else {
@@ -117,6 +117,11 @@ sub children{
         }
     }
     return \@children;
+}
+
+sub children_count{
+    my ($ast) = @_;
+    return scalar ( @$ast ) - 1;
 }
 
 # remove children for which $remove sub returns a true value
@@ -438,6 +443,19 @@ sub recurse{
 #                warn "# recurse:\n", $ast->sprint;
                 my $lhs = $ast->descendant(2)->first_child();
                 my $alternatives = $ast->child(1);
+                my $count = 0;
+                # find recursions: references to $lhs in statement's alternatives
+                for my $ix (0 .. $alternatives->children_count() - 1){
+                    my $alternative = $alternatives->child($ix);
+                    my $id = $alternative->id;
+                    if ($id eq 'bare name' or $id eq 'bracketed name'){
+                        if ( $alternative->first_child eq $lhs ){
+                            warn "recursion: $lhs";
+                            $count++;
+                        }
+                    }
+                }
+                warn $count;
 =pod
 
     for each alternative with $lhs as bare or bracketed name
