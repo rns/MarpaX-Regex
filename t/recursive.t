@@ -61,11 +61,43 @@ is $regex, $expected_regex, "angle brackets regex translate";
 my @groups = $string =~ m/$regex/xg;
 is_deeply \@groups, \@expected_groups, "angle brackets regex match";
 
-=pod
-    my $pp = qr/^(\W* (?: (\w) (?1) \g{-1} | \w? ) \W*)$/ix;
-    for $s ( "saippuakauppias", "A man, a plan, a canal: Panama!" ){
-        print "'$s' is a palindrome\n" if $s =~ /$pp/;
-    }
-=cut
+my @palindromes = ( "saippuakauppias", "A man, a plan, a canal: Panama!" );
+
+my $pp = qr/
+    (?<palindrome>
+        \W*
+        (?:
+            (?<char>[\w]) (?&palindrome) (?&char) | [\w]?
+        )
+        \W*
+    )
+    /ix;
+
+for my $s ( @palindromes ){
+    ok $s =~ /$pp/, "'$s' is a palindrome";
+}
+
+my $BNFish_pp = q{
+
+    palindrome ::=
+        <to be ignored>
+        (?:
+#            (?<char>\w) palindrome (?&char) | char?
+            (?<char>\w) palindrome (?&char) | char?
+        )
+        <to be ignored>
+
+    <to be ignored> ::= [\W]*
+
+    char ::= [\w]
+
+};
+
+$regex = MarpaX::Regex->new($BNFish_pp);
+diag $regex;
+
+for my $s ( @palindromes ){
+    ok $s =~ /$regex/, "'$s' is a palindrome";
+}
 
 done_testing();
