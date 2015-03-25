@@ -4,12 +4,26 @@ use warnings;
 
 use Test::More;
 
-use Data::Dumper;
-$Data::Dumper::Indent = 1;
-$Data::Dumper::Terse = 1;
-$Data::Dumper::Deepcopy = 1;
+use MarpaX::Regex;
+use MarpaX::Regex::AST;
 
-my $string =<<"HERE";
+#
+# Recursive Pattern #1,  "paste method", http://www.rexegg.com/regex-recursion.html
+#
+
+my $string = 'aaa111bbb222';
+
+my $re = '\w{3}\d{3}(?R)?';
+like $string, qr/$re/, '"paste method", regex';
+
+my $BNFish_re = q{ <recursive pattern> ::= \w{3}\d{3} <recursive pattern> ? };
+my $regex = MarpaX::Regex->new($BNFish_re);
+like $string, qr/$regex/x, '"paste method", BNFish';
+
+#
+# balanced angle brackets (perlretut)
+#
+$string =<<"HERE";
 I have some <brackets in <nested brackets> > and
 <another group <nested once <nested twice> > >
 and that's it.
@@ -45,21 +59,22 @@ my $BNFish = q{
 
 my $expected_regex = '(?<balanced_brackets><(?:[^<>]++|(?&balanced_brackets))*>)';
 
-use MarpaX::Regex;
-use MarpaX::Regex::AST;
-
 # must parse unambiguously unless parse error is expected
 my $rex = MarpaX::Regex->new;
 my $value = eval { $rex->parse($BNFish) };
 ok !$@, 'Regex BNF parsed';
 
 my $ast = MarpaX::Regex::AST->new($value);
-my $regex = $ast->distill->substitute->recurse->concat;
+$regex = $ast->distill->substitute->recurse->concat;
 chomp $regex;
 is $regex, $expected_regex, "angle brackets regex translate";
 
 my @groups = $string =~ m/$regex/xg;
 is_deeply \@groups, \@expected_groups, "angle brackets regex match";
+
+#
+# palindromes (perlretut)
+#
 
 my @palindromes = ( "saippuakauppias", "A man, a plan, a canal: Panama!" );
 
