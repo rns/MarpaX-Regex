@@ -14,11 +14,34 @@ use MarpaX::Regex::AST;
 my $string = 'aaa111bbb222';
 
 my $re = '\w{3}\d{3}(?R)?';
-like $string, qr/$re/, '"paste method", regex';
+like $string, qr/$re/, '"paste method", recursive pattern 1, regex';
 
-my $BNFish_re = q{ <recursive pattern> ::= \w{3}\d{3} <recursive pattern> ? };
+my $BNFish_re = q{ <recursive pattern 1> ::= \w{3}\d{3} <recursive pattern 1> ? };
 my $regex = MarpaX::Regex->new($BNFish_re);
-like $string, qr/$regex/x, '"paste method", BNFish';
+like $string, qr/$regex/x, '"paste method", recursive pattern 1, BNFish';
+
+#
+# Recursive Pattern #2,  "paste method", http://www.rexegg.com/regex-recursion.html
+#
+
+my @strings = ( "abc", "abcabc" );
+
+$re = 'abc(?:$|(?R))';
+for $string (@strings){
+    like $string, qr/$re/, '"paste method", recursive pattern 2, regex';
+}
+unlike "abc123", qr/$re/, '"paste method", recursive pattern 2, regex';
+
+$BNFish_re = q{ <recursive pattern 2> ::= 'abc'(?:$|<recursive pattern 2>) };
+$regex = MarpaX::Regex->new($BNFish_re);
+for $string (@strings){
+    like $string, qr/$regex/x, '"paste method", recursive pattern 2, BNFish';
+}
+unlike "abc123", qr/$regex/x, '"paste method", recursive pattern 2, BNFish';
+
+# more recursion tests
+#   http://www.rexegg.com/regex-trick-line-numbers.html#recursion
+#   http://www.rexegg.com/regex-quantifier-capture.html#recursion
 
 #
 # balanced angle brackets (perlretut)
@@ -62,7 +85,7 @@ my $expected_regex = '(?<balanced_brackets><(?:[^<>]++|(?&balanced_brackets))*>)
 # must parse unambiguously unless parse error is expected
 my $rex = MarpaX::Regex->new;
 my $value = eval { $rex->parse($BNFish) };
-ok !$@, 'Regex BNF parsed';
+ok !$@, 'angle brackets Regex BNF parsed';
 
 my $ast = MarpaX::Regex::AST->new($value);
 $regex = $ast->distill->substitute->recurse->concat;
