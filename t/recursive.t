@@ -65,39 +65,33 @@ my @palindromes = ( "saippuakauppias", "A man, a plan, a canal: Panama!" );
 
 my $pp = qr/
     (?<palindrome>
-        \W*
+        [\W]*
         (?:
-            (?<char>[\w]) (?&palindrome) (?&char) | [\w]?
+            ([\w]) (?&palindrome) \1 | [\w]?
         )
-        \W*
+        [\W]*
     )
     /ix;
 
 for my $s ( @palindromes ){
-    ok $s =~ /$pp/, "'$s' is a palindrome";
+    like $s, qr/$pp/ix, , "'$s' is a palindrome (regex)";
 }
 
 my $BNFish_pp = q{
-
-    palindrome ::=
-        <to be ignored>
-        (?:
-#            (?<char>\w) palindrome (?&char) | char?
-            (?<char>\w) palindrome (?&char) | char?
-        )
-        <to be ignored>
-
+    palindrome      ::= <to be ignored>
+                            (?:
+                              # (char) palindrome '\1' | char? also works
+                                (char) palindrome [\1] | char?
+                            )
+                        <to be ignored>
     <to be ignored> ::= [\W]*
-
-    char ::= [\w]
-
+    char            ::= [\w]
 };
 
 $regex = MarpaX::Regex->new($BNFish_pp);
-diag $regex;
 
 for my $s ( @palindromes ){
-    ok $s =~ /$regex/, "'$s' is a palindrome";
+    like $s, qr/$regex/ix, "'$s' is a palindrome (BNFish)";
 }
 
 done_testing();
