@@ -46,15 +46,30 @@ Priorities
 
 =====the=above=are=done=====
   
+  support negative and positive look-ahead and look-behind assertions
+    via literals?
+  
+  documentation
+    cookbook
+    tutorial
+      literals, symbols, character classes
+      BNF primer
+      converting a regex to BNFish syntax
+      building a regex (perlreftut)
+    
+  ? escape sequences do not work unless wrapped in charclasses
+    names for character escapes, metacharacters and other line noise
+        <start of line>   ::= ^
+        <end of line>     ::= $
+        <word character>  ::= \w
+        <digit>           ::= \d  
+  
   more test cases
     3.22. Construct a Parser -- http://www.regexguru.com/2012/09/regular-expressions-cookbook-code-samples/
     http://www.perl.com/pub/2003/06/06/regexps.html -- cozens
     http://blog.stevenlevithan.com/archives/regex-recursion
   
   ? support symbol expansion in character classes
-
-  escaped metacharacters in literals and charclasses
-    like <character class character>
 
   pretty-printing and commenting
     = e.g. for angle brackets:
@@ -75,12 +90,6 @@ Priorities
     bareword literals
     PEG uses quoted literals and bareword symbols
 
-  names for character escapes, metacharacters and other line noise
-      <start of line>   ::= ^
-      <end of line>     ::= $
-      <word character>  ::= \w
-      <digit>           ::= \d  
-  
   abstract distill() 
     parent/child pairs
 

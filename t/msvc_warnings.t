@@ -16,10 +16,10 @@ my $source = q{
 
     warning ::= (file) '\(' (line) '\)' ' : warning ' (code) ': ' (message) [\n]
 
-    file    ::= [\w\-:\/ \\\.]+    # windows and unix paths
+    file    ::= [\w\-:\/ \\\.]+  # windows and unix paths
     line    ::= int
     code    ::= 'C' int
-    message ::= [\w' \-:]+ #'
+    message ::= [\w\' :\-]+ #'   # [: and :] form part of POSIX character classes
     int     ::= [\d]+
 
 };

@@ -76,7 +76,6 @@ my $BNFish = q{
                 )*
             '>'
         )
-
     <non angle brackets> ::= [^<>]++ # non-backtracking
 };
 
@@ -103,11 +102,11 @@ my @palindromes = ( "saippuakauppias", "A man, a plan, a canal: Panama!" );
 
 my $pp = qr/
     (?<palindrome>
-        [\W]*
+        \W*
         (?:
-            ([\w]) (?&palindrome) \1 | [\w]?
+            (\w) (?&palindrome) \1 | \w?
         )
-        [\W]*
+        \W*
     )
     /ix;
 
@@ -122,8 +121,8 @@ my $BNFish_pp = q{
                                 (char) palindrome [\1] | char?
                             )
                         <to be ignored>
-    <to be ignored> ::= [\W]*
-    char            ::= [\w]
+    <to be ignored> ::= \W*   # [\W]* also works
+    char            ::= \w    # as does [\w]
 };
 
 $regex = MarpaX::Regex->new($BNFish_pp);
