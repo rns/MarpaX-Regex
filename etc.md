@@ -26,11 +26,6 @@ Syntax
 Priorities
 ----------
 
-  NO generalized recursion -- cannot differentiate from symbol expansion
-    alternative is to convert all to capture groups that feels plain ugly
-    references to lhs of other statements
-    e.g. json parser by Randall Swartz
-
   NO quotemeta on literals -- quoting is left to application
     in concat()
 
@@ -44,8 +39,19 @@ Priorities
     Currently NAME is restricted to simple identifiers only.  In other words, it must match "/^[_A-Za-z][_A-Za-z0-9]*\z/" or its Unicode extension (see utf8), though it is not extended by the locale (see perllocale).
     private method regex_name() does it
 
+  s-expression regularexp
+    http://pastebin.com/ndrHTZJB
+
 =====the=above=are=done=====
   
+  ? support Perl code
+    (?{ &op() }) -- now passed through as literal, e.g. '(?{ &op() })'
+  
+  Swartz json regex cannot be converted and is a good candidate for compiling to SLIF
+  
+  HTML parser in Regex
+    http://www.codeproject.com/Articles/297056/Most-Important-Regular-Expression-for-parsing-HTML
+
   support negative and positive look-ahead and look-behind assertions
     via literals?
   
