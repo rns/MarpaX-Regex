@@ -1,5 +1,5 @@
 # source: http://www.codeproject.com/Articles/297056/Most-Important-Regular-Expression-for-parsing-HTML
-
+use 5.010;
 use strict;
 use warnings;
 
@@ -99,5 +99,13 @@ my $BNFish = q {
 
 my $regex = MarpaX::Regex->new($BNFish);
 like $html, qr/$regex/six, "html BNFish match";
+
+# census tags
+my @expected_tags = qw{ HTML HEAD TITLE META BODY };
+my %tags;
+while ($html =~ m/$regex/gsixc){
+    $tags{$1}++;
+}
+is_deeply [ sort @expected_tags ], [ sort keys %tags ], "html tags census with BNFish regex";
 
 done_testing();
