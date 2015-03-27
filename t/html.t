@@ -75,6 +75,7 @@ my $BNFish = q {
             \s*
             (<empty element maybe>)
         '>'
+
     <tag name>                      ::= \w+
 
     attributes                      ::= (?:
@@ -91,11 +92,11 @@ my $BNFish = q {
                                         |
                                         <only 1 right-angled bracket>
 
-    <only 1 right-angled bracket>   ::= [^>\s]+
     <double quote>                  ::= '"'
     <0 or more non-double quotes>   ::= [^"]* #"
     <single quote>                  ::= "'"
     <0 or more non-single quotes>   ::= [^']* #'
+    <only 1 right-angled bracket>   ::= [^>\s]+
 
     <empty element maybe>           ::= [/]?
 };
