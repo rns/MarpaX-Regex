@@ -8,23 +8,18 @@ local $Data::Dumper::Indent = 1;
 local $Data::Dumper::Terse = 1;
 local $Data::Dumper::Purity = 0;
 
-use MarpaX::AST;
-
 use Carp;
 use Scalar::Util qw{ blessed };
 
 use parent 'MarpaX::AST';
 
-#
-# MarpaX::Regex-specific ast methods start here
-#
 sub concat{
     my ($ast, $opts ) = @_;
 
     my $s = '';
 
     $opts //= { };
-    $ast->_assert_options( $opts, { } );
+    $ast->assert_options( $opts, { } );
     $opts->{indent} = '  ';
 
     my $parent_node_id;

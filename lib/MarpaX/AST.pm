@@ -166,7 +166,7 @@ sub remove_child{
     return splice ( @$ast, $ix + 1, 1 );
 }
 
-sub _assert_options{
+sub assert_options{
     my ($ast, $opts, $spec) = @_;
 
     $spec //= {};
@@ -189,7 +189,7 @@ sub _assert_options{
 sub walk{
     my ($ast, $opts ) = @_;
 
-    _assert_options($opts, {
+    $ast->assert_options($opts, {
         visit => [ sub{ ref $_[0] eq "CODE" }, "CODE ref" ]
     });
     $opts->{traversal} //= 'preorder';
@@ -231,7 +231,7 @@ sub sprint{
     my $s = '';
 
     $opts //= { };
-    _assert_options( $opts, { } );
+    $ast->assert_options( $opts, { } );
     $opts->{indent} = '  ';
 
     # set visitor
