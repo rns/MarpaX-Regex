@@ -1,4 +1,5 @@
-# http://pastebin.com/ndrHTZJB
+# source: http://www.codeproject.com/Articles/297056/Most-Important-Regular-Expression-for-parsing-HTML
+
 use strict;
 use warnings;
 
