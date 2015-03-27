@@ -144,6 +144,9 @@ my $gruber_url_BNFish = q{
 
 };
 
+# silence Deep recursion ... warning
+my $DOWARN = 0; BEGIN { $SIG{'__WARN__'} = sub { warn $_[0] if $DOWARN } }
+
 my $url = 'https://mail.google.aero';
 my $regex = MarpaX::Regex->new($gruber_url_BNFish);
 diag $regex;
