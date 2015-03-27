@@ -52,7 +52,8 @@ lexeme default = action => [ name, values ] latm => 1
     <symbol name> ::= <bracketed name>
     <bare name> ~ [\w]+
     <bracketed name> ~ '<' <bracketed name string> '>'
-    <bracketed name string> ~ [\s\.\w]+
+    <bracketed name string> ~ <bracketed name character>+
+    <bracketed name character> ~ [^>] | '\>' | '\<'
 
     # grouping and alternation
     primary ::= literal
