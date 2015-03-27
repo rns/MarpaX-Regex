@@ -30,7 +30,9 @@ Priorities
     in concat()
 
 =====the=above=are=done=by=saying=NO=to=them===
-
+  
+  Swartz json regex cannot be built with symbol expansion,
+    only with recurse (?&NAME) groups, which seems to be questionable to support
   symbol expansion
   explicit non-capturing parens (?: ...)
   recursion
@@ -44,14 +46,15 @@ Priorities
 
 =====the=above=are=done=====
   
-  ? support Perl code
-    (?{ &op() }) -- now passed through as literal, e.g. '(?{ &op() })'
-  
-  Swartz json regex cannot be converted and is a good candidate for compiling to SLIF
-  
   HTML parser in Regex
     http://www.codeproject.com/Articles/297056/Most-Important-Regular-Expression-for-parsing-HTML
 
+  ? support Perl code
+    (?{ &op() }) -- now passed through as literal, e.g. '(?{ &op() })'
+  
+  test for pretty-printing
+   /^<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/ #"
+   
   support negative and positive look-ahead and look-behind assertions
     via literals?
   
@@ -77,6 +80,10 @@ Priorities
   
   ? support symbol expansion in character classes
 
+  ?? if anything, Swartz json regex cannot be converted and 
+  is a good candidate for compiling to SLIF
+    (?{ &op() }) need to be made SLIF actions
+  
   pretty-printing and commenting
     = e.g. for angle brackets:
         (?<balanced_brackets>
