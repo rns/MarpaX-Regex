@@ -115,14 +115,14 @@ for my $s ( @palindromes ){
 }
 
 my $BNFish_pp = q{
-    palindrome      ::= <to be ignored>
-                            (?:
-                              # (char) palindrome '\1' | char? also works
-                                (char) palindrome [\1] | char?
-                            )
-                        <to be ignored>
-    <to be ignored> ::= \W*   # [\W]* also works
-    char            ::= \w    # as does [\w]
+    palindrome          ::= <to be ignored>
+                                (?:
+                                    (<char>) palindrome <recurse to char> | <char>?
+                                )
+                            <to be ignored>
+    <to be ignored>     ::= \W*
+    <char>              ::= \w
+    <recurse to char>   ::= \1
 };
 
 $regex = MarpaX::Regex->new($BNFish_pp);
