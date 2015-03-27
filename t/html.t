@@ -60,7 +60,7 @@ my $BNFish = q {
 
     html ::=
         '<'
-            (tag_name)
+            (<tag name>)
             (
                 (?:
                     \s+\w+
@@ -73,15 +73,31 @@ my $BNFish = q {
                 )*
             )
             \s*
-            ([/]?)
+            (<empty element maybe>)
         '>'
-    tag_name   ::= \w+
-    attributes ::= (?:'"'[^"]*'"') #"
-                   |
-                   (?:"'"[^']*"'") #'
-                   |
-                   [^>\s]+
+    <tag name>                      ::= \w+
 
+    attributes                      ::= (?:
+                                            <double quote>
+                                            <0 or more non-double quotes>
+                                            <double quote>
+                                        )
+                                        |
+                                        (?:
+                                            <single quote>
+                                            <0 or more non-single quotes>
+                                            <single quote>
+                                        )
+                                        |
+                                        <only 1 right-angled bracket>
+
+    <only 1 right-angled bracket>   ::= [^>\s]+
+    <double quote>                  ::= '"'
+    <0 or more non-double quotes>   ::= [^"]* #"
+    <single quote>                  ::= "'"
+    <0 or more non-single quotes>   ::= [^']* #'
+
+    <empty element maybe>           ::= [/]?
 };
 
 my $regex = MarpaX::Regex->new($BNFish);
