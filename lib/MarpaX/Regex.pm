@@ -21,7 +21,14 @@ lexeme default = action => [ name, values ] latm => 1
 
     # bottom to top: char, literal, charclass, symbol, grouping/alternation, statement
     metacharacter       ~ '^' | '$' | '.' | [\\\\]
-    <character escape>  ~ '\d' | '\w'
+    # todo: add other character escapes
+    <character escape>  ~
+    # (non)digits, alphanumerics, whitespaces,
+    '\d' | '\D' | '\w' | '\W' | '\s' | '\S' |
+    # recursions
+    '\1' |
+    # zero-width assertions
+    '\b' | '\B' | '\A' | '\z' | '\Z'
 
     # spaces are allowed between ? and +, hence G1 rule
     quantifier ::= '?' | '*' | '+'
