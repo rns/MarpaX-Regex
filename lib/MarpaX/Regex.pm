@@ -43,10 +43,10 @@ lexeme default = action => [ name, values ] latm => 1
     uint    ~ [\d]+
     comma   ~ ','
 
-    literal ::= ( ["] ) <string without double quotes and metacharacters> ( ["] )
-    literal ::= ( ['] ) <string without single quotes and metacharacters> ( ['] )
-    <string without double quotes and metacharacters> ~ [^\^\$"]+ #"
-    <string without single quotes and metacharacters> ~ [^\^\$']+ #'
+    literal ::= ( ["] ) <string without double quotes> ( ["] )
+    literal ::= ( ['] ) <string without single quotes> ( ['] )
+    <string without double quotes> ~ [^"]+ #"
+    <string without single quotes> ~ [^']+ #'
 
     <character class> ::= '[' <character class characters> ']'
     <character class characters> ~ <character class character>+
