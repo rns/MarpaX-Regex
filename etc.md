@@ -44,11 +44,15 @@ Priorities
   s-expression regularexp
     http://pastebin.com/ndrHTZJB
 
-=====the=above=are=done=====
-  
   HTML parser in Regex
     http://www.codeproject.com/Articles/297056/Most-Important-Regular-Expression-for-parsing-HTML
 
+=====the=above=are=done=====
+  
+  composability
+    namespaces
+    include
+  
   ? support Perl code
     (?{ &op() }) -- now passed through as literal, e.g. '(?{ &op() })'
   
