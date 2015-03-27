@@ -89,6 +89,7 @@ my $gruber_url_BNFish = q{
       )
       |                                     # OR, the following to match naked domains:
       (?:
+        # assertions can be passed through as literals
         ('?<!@')                            # not preceded by a @, avoid matching foo@_gmail.com_
         <1 or more lower case chars and digits>
         (?:[.\-]<1 or more lower case chars and digits>)*
@@ -110,7 +111,8 @@ my $gruber_url_BNFish = q{
     <domain name followed by a slash>   ::= [a-z0-9.\-]+[.] <tld> '/'
     <run of non-space, non-()\<\>{}[]>  ::= [^\s()<>{}\[\]]+
     <not a space or one of punct chars> ::= [^\s`!()\[\]{};:'".,<>?«»“”‘’] #'
-    <word boundary>                     ::= \b
+    <word boundary>                     ::= [\b] # bare escape sequences need to be wrapped
+                                                 # otherwise they'll be treated as literals
     <0 or 1 forward slash>              ::= [/]?
     <1 or more lower case chars and digits>  ::= [a-z0-9]+
     <tld> ::= (?:
@@ -149,8 +151,11 @@ my $DOWARN = 0; BEGIN { $SIG{'__WARN__'} = sub { warn $_[0] if $DOWARN } }
 
 my $url = 'https://mail.google.aero';
 my $regex = MarpaX::Regex->new($gruber_url_BNFish);
-diag $regex;
 like $url, qr/$regex/ix, "Gruber's URL pattern (BNFish)";
+
 $url =~ qr/$regex/ix;
 is $&, $url, "Gruber's URL pattern (BNFish) capture";
+
+unlike 'foo.na@example.com', qr/$regex/ix, "foo.na in foo.na\@example.com isn't matched";
+
 done_testing();
