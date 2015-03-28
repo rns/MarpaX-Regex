@@ -11,7 +11,7 @@ local $Data::Dumper::Purity = 0;
 use Carp;
 use Scalar::Util qw{ blessed };
 
-use parent 'MarpaX::AST';
+use parent 'MarpaX::Regex::AST::Base';
 
 sub concat{
     my ($ast, $opts ) = @_;

@@ -1,4 +1,4 @@
-package MarpaX::AST;
+package MarpaX::Regex::AST::Base;
 
 use 5.010;
 use strict;
@@ -21,10 +21,10 @@ sub new {
         $ast = [ $ast ];
     }
 
-    return MarpaX::AST::bless( $ast, $class );
+    return MarpaX::Regex::AST::Base::bless( $ast, $class );
 }
 
-sub MarpaX::AST::bless{
+sub MarpaX::Regex::AST::Base::bless{
 
     my ($ast, $class) = @_;
 
