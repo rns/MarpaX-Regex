@@ -215,7 +215,7 @@ sub regex_name{
 
 =head2
 
-    find recursive statements and translate them to regex syntax
+    find recursive statements and compile them to regex syntax
 
     A statement is recursive if one or more its alternatives contain symbols,
     which are the same as its lhs; recursive statement must become

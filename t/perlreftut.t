@@ -242,7 +242,7 @@ for my $test (@$tests){
 
         skip "BNF source parse error", 3 unless defined $ast and $must_parse;
 
-        my $re = $rex->translate( $ast );
+        my $re = $rex->compile( $ast );
         diag "RE: /$re/" unless $ENV{HARNESS_ACTIVE};
 
         my $re_compiles;

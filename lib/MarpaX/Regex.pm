@@ -120,7 +120,7 @@ sub new {
             warn "# Parse failure:\n" . $self->parse_debug($source);
             return;
         }
-        return $self->translate( $ast );
+        return $self->compile( $ast );
     }
 
     return $self;
@@ -132,29 +132,7 @@ sub parse{
     return ${ $self->{slg}->parse( \$source ) };
 }
 
-=head2 translate pseudocode
-
-    sanity check
-        merge statements with the same lhs, like
-            lhs ::= rhs1
-            lhs ::= rhs2
-        to a group under the lhs
-            lhs ::= rhs1 '|' rhs2
-        by joing the groups with [ 'group', [ 'primary', [ 'alternation', '|' ] ] ]
-
-    until there is no symbols to replace
-        find terminals (rules without symbols)
-        replace all occurrences terminal symbols in non-terminals with the contents of terminals
-    if there are symbols, but there is no terminals to replace them, warn
-    concatenate ast
-
-    terminal rules      -- RHS has no symbols
-    non-terminals rules -- RHS has at least one symbol
-        -- enforce those rules in the grammar?
-
-=cut
-
-sub translate{
+sub compile{
     my ($self, $ast) = @_;
     $ast = MarpaX::Regex::AST->new($ast);
     return $ast->distill->substitute->recurse->concat();

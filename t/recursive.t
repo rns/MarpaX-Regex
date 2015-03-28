@@ -89,7 +89,7 @@ ok !$@, 'angle brackets Regex BNF parsed';
 my $ast = MarpaX::Regex::AST->new($value);
 $regex = $ast->distill->substitute->recurse->concat;
 chomp $regex;
-is $regex, $expected_regex, "angle brackets regex translate";
+is $regex, $expected_regex, "angle brackets regex compile";
 
 my @groups = $string =~ m/$regex/xg;
 is_deeply \@groups, \@expected_groups, "angle brackets regex match";
