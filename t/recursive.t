@@ -100,7 +100,7 @@ is_deeply \@groups, \@expected_groups, "angle brackets regex match";
 
 my @palindromes = ( "saippuakauppias", "A man, a plan, a canal: Panama!" );
 
-my $pp = qr/
+my $pp_re = qr/
     (?<palindrome>
         \W*
         (?:
@@ -111,10 +111,10 @@ my $pp = qr/
     /ix;
 
 for my $s ( @palindromes ){
-    like $s, qr/$pp/ix, , "'$s' is a palindrome (regex)";
+    like $s, qr/$pp_re/ix, , "'$s' is a palindrome (regex)";
 }
 
-my $BNFish_pp = q{
+my $pp_BNFish = q{
     palindrome          ::= <to be ignored>
                                 (?:
                                     (<char>) palindrome <recurse to char> | <char>?
@@ -125,7 +125,7 @@ my $BNFish_pp = q{
     <recurse to char>   ::= \1
 };
 
-$regex = MarpaX::Regex->new($BNFish_pp);
+$regex = MarpaX::Regex->new($pp_BNFish);
 
 for my $s ( @palindromes ){
     like $s, qr/$regex/ix, "'$s' is a palindrome (BNFish)";
