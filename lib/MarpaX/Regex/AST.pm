@@ -11,6 +11,7 @@ local $Data::Dumper::Purity = 0;
 use Carp;
 use Scalar::Util qw{ blessed };
 
+use lib q{../../MarpaX-AST/lib};
 use parent 'MarpaX::AST';
 
 sub concat{
