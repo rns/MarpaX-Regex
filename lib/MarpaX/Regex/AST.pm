@@ -307,17 +307,15 @@ sub substitute{
 sub distill{
     my ($ast) = @_;
 
-    my $root;
-    my $parent;
-    my $statement;
-
-    local $Data::Dumper::Indent = 0;
+    my $root = MarpaX::Regex::AST->new( 'statements' );
+    my $parents = [ $root ];
 
     my $opts = {
         skip => sub {
             my ($ast) = @_;
             my ($node_id, @children) = @$ast;
             state $node_skip_list = { map { $_ => 1 } (
+                'statements',
                 'group', 'primary',
                 'alternative rule',
                 'symbol', 'symbol name',
@@ -326,31 +324,16 @@ sub distill{
             return exists $node_skip_list->{ $node_id }
         },
         visit => sub {
-            my ($ast) = @_;
+            my ($ast, $ctx) = @_;
             my ($node_id, @children) = @$ast;
-            # parent nodes
-            if ($node_id eq 'statements'){
-                $root = MarpaX::Regex::AST->new( $node_id );
-                $parent = $root;
-            }
-            elsif ($node_id eq 'statement'){
-                $statement = $root->append_child( MarpaX::Regex::AST->new( $node_id ) );
-            }
-            elsif ($node_id eq 'lhs'){
-                $parent = $statement->append_child( MarpaX::Regex::AST->new( $node_id ) );
-            }
-            elsif ($node_id eq 'alternatives'){
-                $parent = $statement->append_child( MarpaX::Regex::AST->new( $node_id ) );
-            }
-            # child nodes; #text nodes will also be added here
-            # so we don't care about <quantifier modifier>'s (yet)
-            elsif ($ast->is_literal){
-                $parent->append_child( MarpaX::Regex::AST->new( $ast ) );
-            }
-            else{
-                # debug-only
-                # warn "# unknown node type: $node_id:\n", Dumper $ast;
-            }
+
+            my $d = $ctx->{depth};
+
+#            say '   ', qq{  } x ($d), qq{$d: },
+#                ($ast->is_literal ? qq{$node_id: '$children[0]'} : $node_id);
+
+            $parents->[ $d + 1 ] = $parents->[ $d ]->append_child(
+                MarpaX::Regex::AST->new( $ast->is_literal ? $ast : $node_id ) );
         }
     }; ## opts
 
