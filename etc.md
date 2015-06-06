@@ -2,27 +2,44 @@
 ============
 
 quicker and easier writing
-    
+
 improve build- and read-ability
   define names for metacharacters and character escapes
   take your regex and modularize it
     needs full regex parser
-    
-compile to Marpa::R2 for long strings and/or hard regexes
-  external lexing
-  lexemes
-    literals, charclasses and symbolless groups
-  expand the brackets by rewriting the grammar to EBNF -> BNF
-    to prioritized rules to handle associativity and precedence?
-    MarpaX::Regex grammar as a template
+
+use cases
+
+  readability improvement
+    pretty print
+    add names for parts of a regex instead of # comments
+  building a regex
+    write it down
+    ... as in perlreftut
+  building a regex-based parser
+    s-expressions
+    action subs
+  speeding up a regex
+    hard regex
+    long input -- balanced delimiters?
+    benchmark($input) method
+      regex vs SLIF target
+  debugging/development via SLIF-compiled regex
+    debug statements -- filtered out by default, preserved when using debug() method
+
+2.0
+  library and composition
+
+how this works
+  symbol expansion and recursion
 
 Syntax
-------    
+------
 
 # symbols in RE groups, empty groups, optional <> for symbols with spaces
-  s ::= 'house' ( 'cat' |)      
+  s ::= 'house' ( 'cat' |)
   s ::= 'house' ( 'cat' ( 's' |) |)
-  
+
 Priorities
 ----------
 
@@ -30,7 +47,7 @@ Priorities
     in concat()
 
 =====the=above=are=done=by=saying=NO=to=them===
-  
+
   Swartz json regex cannot be built with symbol expansion,
     only with recurse (?&NAME) groups, which seems to be questionable to support
   symbol expansion
@@ -48,20 +65,40 @@ Priorities
     http://www.codeproject.com/Articles/297056/Most-Important-Regular-Expression-for-parsing-HTML
 
 =====the=above=are=done=====
-  
+
+  a nice use/test case using (?DEFINE)
+    http://blogs.perl.org/users/mauke/2015/04/fun-with-logical-expressions-2-electric-boogaloo.html
+
+  regex parser for MarpaX::Languages::Regex::AST -- a base for regex translation?
+    pretty-printing to start readability improvement
+      /^<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/ #"
+  regexp which recognizes Perl module names
+      /^((?:\w+(?:::\w+)*)|[^:]+)(.*)$/) -- http://irclog.perlgeek.de/marpa/2014-08-08#i_9152443
+
+  test multiple anchors
+    http://blogs.perl.org/users/brian_d_foy/2015/04/huh-multiple-beginning-of-line-anchors-work.html
+
   composability
     namespaces
     include
-  
-  ? support Perl code
+
+  RegExp grammar similar to one used by this module
+    http://jflex.de/manual.html#LexRules
+
+  ? support Perl code and other (?...) constructs
     (?{ &op() }) -- now passed through as literal, e.g. '(?{ &op() })'
-  
-  test for pretty-printing
-   /^<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/ #"
-   
+
   support negative and positive look-ahead and look-behind assertions
     via literals?
-  
+
+  compile to Marpa::R2 for long strings and/or hard regexes
+    external lexing
+    lexemes
+      literals, charclasses and symbolless groups
+    expand the brackets by rewriting the grammar to EBNF -> BNF
+      to prioritized rules to handle associativity and precedence?
+      MarpaX::Regex grammar as a template
+
   documentation
     cookbook
     tutorial
@@ -69,45 +106,37 @@ Priorities
       BNF primer
       converting a regex to BNFish syntax
       building a regex (perlreftut)
-    
+
   ? escape sequences do not work unless wrapped in charclasses
     names for character escapes, metacharacters and other line noise
         <start of line>   ::= ^
         <end of line>     ::= $
         <word character>  ::= \w
-        <digit>           ::= \d  
-  
-  more test cases
+        <digit>           ::= \d
+
+  more test/use cases
+    http://stackoverflow.com/questions/30633258/complex-string-splitting
+    http://www.reddit.com/r/perl/comments/36hy9g/proper_parsing_filepath_parse/
+    http://www.reddit.com/r/perl/comments/35c2cm/a_regex_statement_that_isnt_working_properly/
+    http://stackoverflow.com/questions/27393264/how-to-get-this-perl-extended-regex-to-work/27394437#27394437
     3.22. Construct a Parser -- http://www.regexguru.com/2012/09/regular-expressions-cookbook-code-samples/
     http://www.perl.com/pub/2003/06/06/regexps.html -- cozens
     http://blog.stevenlevithan.com/archives/regex-recursion
-  
+
   ? support symbol expansion in character classes
 
-  ?? if anything, Swartz json regex cannot be converted and 
+  ?? if anything, Swartz json regex cannot be converted and
   is a good candidate for compiling to SLIF
     (?{ &op() }) need to be made SLIF actions
-  
-  pretty-printing and commenting
-    = e.g. for angle brackets:
-        (?<balanced_brackets>
-            <
-                (?:
-                    [^<>]++
-                        |
-                    (?&balanced_brackets)
-                )*
-            >
-        )
 
   assertions
 
-  more regex-ish syntax  
+  more regex-ish syntax
     bracketed symbols <>
     bareword literals
     PEG uses quoted literals and bareword symbols
 
-  abstract distill() 
+  abstract distill()
     parent/child pairs
 
 = ast
@@ -117,14 +146,14 @@ Priorities
   $ast->child(sub{ $_->[0] eq 'bracketed name' }, $child);
   my ($child, $ix) = $ast->child( sub{ $_->[0] eq 'bracketed name' } );
   my (undef, $ix) = $ast->child( sub{ $_->[0] eq 'bracketed name' } );
-  
+
   iterator
     selector
     action
-    modifying 
+    modifying
     non-modidying -- reverse
-  
-  id()   
+
+  id()
   child(index_or_predicate)
     first_child()
     last_child()
@@ -132,13 +161,13 @@ Priorities
   append_child(MarpaX::Regex::AST)
   remove_child(index_or_predicate)
   replace_child(index_or_predicate, MarpaX::Regex::AST)
-   
+
 use cases
   Building regexp as a rewriting system
-    BNF 
+    BNF
       msvc_warnings.t
       Marpa::R2 synopsis
-    RE  
+    RE
       json parser by Randal
       angle brackets
       gruber url regexp
@@ -152,7 +181,7 @@ use cases
   RE Converter -- give a regex, have it presented in a nice syntax and start working with it
       - MarpaX::Languages::Regexp::AST
   Grammar inference with Sequitur
-    
+
 RE Features (Support or not)
 ----------------------------
 
@@ -164,11 +193,11 @@ Part 1: The basics
   Matching this or that
   Grouping things and hierarchical matching
   Extracting matches
-  
+
   Backreferences
   Relative backreferences
   Named backreferences
-  
+
   Alternative capture group numbering
   Position information
   Non-capturing groupings
@@ -183,7 +212,7 @@ Part 1: The basics
     and optimizing the final combined regexp.
 
   Using regular expressions in Perl
-  
+
 Part 2: Power tools
   More on characters, strings, and character classes
   Compiling and saving regular expressions
@@ -200,7 +229,7 @@ Part 2: Power tools
 
 Synopsis
 --------
-    
+
     use 5.010;
     use MarpaX::Regex;
     my $re = MarpaX::Regex->new(<<GRAMMAR);
@@ -211,7 +240,7 @@ Synopsis
     $input =~ m/$re/x; # extended syntax is required
     # $1 etc. captures work as expected
     $input =~ s/$re/substitution/x;
-        
+
 Implementation Details
 ----------------------
 
@@ -223,7 +252,7 @@ BNF Primer
 ----------
 
 BNF -- a rewriting system
--- Jeffrey Kegler on 
+-- Jeffrey Kegler on
 [Marpa IRC Channel](http://irclog.perlgeek.de/marpa/2014-01-15#i_8120641}
 
 a stone is a stein is a rock is a boulder is a pebble
@@ -300,9 +329,9 @@ RE escapes and their names
 
 Regexp::Common
 --------------
-    
-    convert 
-    
+
+    convert
+
     * strings with balanced parenthesized delimiters.
     * comments of various languages (43 languages currently).
     * delimited strings.
@@ -316,11 +345,11 @@ Regexp::Common
     * numbers (integers and reals).
     * profanity.
     * leading and trailing whitespace.
-    * zip codes.        
+    * zip codes.
 
     superset
 
-    * email addresses 
+    * email addresses
     * HTML/XML tags
     * more numerical matchers,
     * mail headers (including multiline ones),
@@ -333,14 +362,14 @@ Regexp::Common
     -- http://www.regular-expressions.info/examplesprogrammer.html
 
 * quotes
-    
-    - "simple, well-defined, and self-contained"   
+
+    - "simple, well-defined, and self-contained"
     -- http://blogs.perl.org/users/jeffrey_kegler/2013/05/the-design-of-four.html
-    
-    - ... Regex compiler -- a compiler from some nice BNF-ish format, to Perl regular expressions. 
+
+    - ... Regex compiler -- a compiler from some nice BNF-ish format, to Perl regular expressions.
     -- https://groups.google.com/d/msg/marpa-parser/2TZn5nolyzk/u5rCDIZ0gKoJ
 
-    - So the basic idea of the SLIF is BNF -- a rewriting system with an alphabet of terminals, and rules which are composed of symbols. 
+    - So the basic idea of the SLIF is BNF -- a rewriting system with an alphabet of terminals, and rules which are composed of symbols.
 
         Add a special start symbol, and you're ready to rock 'n roll!
 
@@ -361,7 +390,7 @@ https://github.com/jddurand/MarpaX-Languages-ECMAScript-AST/blob/master/lib/Marp
   <regex>       ::= <term> '|' <regex> |  <term>
   <term>        ::= { <factor> } # one or more
   <factor>      ::= <base> { '*' }
-  <base>        ::= <char> |  '\\' <char> |  '(' <regex> ')'  
+  <base>        ::= <char> |  '\\' <char> |  '(' <regex> ')'
 # BNF in BNF
   <syntax>      ::= <rule> | <rule> <syntax>
   <rule>        ::= "<" <rule-name> ">" "::=" <expression>
@@ -382,7 +411,7 @@ https://github.com/jddurand/MarpaX-Languages-ECMAScript-AST/blob/master/lib/Marp
   character = letter | digit | symbol | "_" ;
 
   identifier = letter , { letter | digit | "_" } ;
-  terminal = "'" , character , { character } , "'" 
+  terminal = "'" , character , { character } , "'"
            | '"' , character , { character } , '"' ;
 
   lhs = identifier ;
@@ -400,34 +429,34 @@ https://github.com/jddurand/MarpaX-Languages-ECMAScript-AST/blob/master/lib/Marp
 References
 ----------
 
-    There are a number of projects that would, I think, be quite popular and 
-    useful but which I simply don't have the cycles to consider doing 
-    myself.  One is a Regex compiler -- a compiler from some nice BNF-ish 
-    format, to Perl regular expressions.  I'd think this could be very 
-    popular -- it would be very much in the comfort zone of some programmers 
-    who otherwise would not consider using Marpa. 
+    There are a number of projects that would, I think, be quite popular and
+    useful but which I simply don't have the cycles to consider doing
+    myself.  One is a Regex compiler -- a compiler from some nice BNF-ish
+    format, to Perl regular expressions.  I'd think this could be very
+    popular -- it would be very much in the comfort zone of some programmers
+    who otherwise would not consider using Marpa.
 
-    To be specific, this is another specialized Marpa-to-Perl compiler.  The 
-    compiler would write a Perl regex, and the Perl regex would be what 
-    actually runs.  The value added by Marpa would be that more complex 
-    regexes could be more quickly and easily written, and the output regex 
-    could be nicely pretty-printed and commented. 
+    To be specific, this is another specialized Marpa-to-Perl compiler.  The
+    compiler would write a Perl regex, and the Perl regex would be what
+    actually runs.  The value added by Marpa would be that more complex
+    regexes could be more quickly and easily written, and the output regex
+    could be nicely pretty-printed and commented.
 
-    Sometimes not understood is that one thing regular expressions *cannot* 
-    parse is the representation of a regular expression.  Regular 
-    expressions are defined recursively, but they do not themselves deal 
-    with recursion. 
+    Sometimes not understood is that one thing regular expressions *cannot*
+    parse is the representation of a regular expression.  Regular
+    expressions are defined recursively, but they do not themselves deal
+    with recursion.
 
-    One way to think of this project is as a Marpa super-superset of 
-    Regexp::Common, whose functionality could be incorporated.  A related 
-    effort within Perl was the DEFINE predicate for sub-patterns, but DEFINE 
-    had horrific syntax and AFAIK was little or never used. 
+    One way to think of this project is as a Marpa super-superset of
+    Regexp::Common, whose functionality could be incorporated.  A related
+    effort within Perl was the DEFINE predicate for sub-patterns, but DEFINE
+    had horrific syntax and AFAIK was little or never used.
 
     -- Jeffrey Kegler, https://groups.google.com/d/msg/marpa-parser/2TZn5nolyzk/u5rCDIZ0gKoJ
 
-    It would be awesome to have more targets, for example JavaScript. So 
-    one would be able to write a language (protocol) in BNF form and parse 
-    it in JS on client side and with perl or other language on server 
+    It would be awesome to have more targets, for example JavaScript. So
+    one would be able to write a language (protocol) in BNF form and parse
+    it in JS on client side and with perl or other language on server
     side. It's for sure interesting task and chalenging one.
 
     -- Ruslan Zakirov, https://groups.google.com/d/msg/marpa-parser/2TZn5nolyzk/kqq5NM2zkIQJ
