@@ -252,5 +252,42 @@ sub sprint{
     return $s;
 }
 
+sub distill{
+    my ($ast, $opts) = @_;
+
+    my $class = ref $ast;
+
+    my $root = $class->new( $opts->{root} );
+    my $parents = [ $root ];
+
+    $ast->walk( {
+        skip => sub {
+            my ($ast) = @_;
+            my ($node_id) = @$ast;
+            state $skip = { map { $_ => 1 } @{ $opts->{skip} } };
+            return exists $skip ->{ $node_id }
+        },
+        visit => sub {
+            my ($ast, $ctx) = @_;
+            my ($node_id, @children) = @$ast;
+
+            state $dont_visit = { map { $_ => 1 } @{ $opts->{dont_visit} } };
+            state $dont_visit_ix = keys %$dont_visit;
+
+            $opts->{print_node}->($ast, $ctx) if exists $opts->{print_node};
+
+            return if exists $dont_visit->{ $node_id };
+
+            my $parent_ix = $ctx->{depth} - $dont_visit_ix;
+
+            $parents->[ $parent_ix + 1 ] =
+                $parents->[ $parent_ix ]->append_child(
+                    $class->new( $ast->is_literal ? $ast : $node_id ) );
+        }
+    } );
+
+    return $root;
+}
+
 1;
 

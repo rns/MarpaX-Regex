@@ -307,39 +307,17 @@ sub substitute{
 sub distill{
     my ($ast) = @_;
 
-    my $root = MarpaX::Regex::AST->new( 'statements' );
-    my $parents = [ $root ];
+    return $ast->SUPER::distill({
+        root => 'statements',
+        skip => [
+            'statements',
+            'group', 'primary',
+            'alternative rule',
+            'symbol', 'symbol name',
+            'character class', 'literal'
+        ]
+    });
 
-    my $opts = {
-        skip => sub {
-            my ($ast) = @_;
-            my ($node_id, @children) = @$ast;
-            state $node_skip_list = { map { $_ => 1 } (
-                'statements',
-                'group', 'primary',
-                'alternative rule',
-                'symbol', 'symbol name',
-                'character class', 'literal'
-            ) };
-            return exists $node_skip_list->{ $node_id }
-        },
-        visit => sub {
-            my ($ast, $ctx) = @_;
-            my ($node_id, @children) = @$ast;
-
-            my $d = $ctx->{depth};
-
-#            say '   ', qq{  } x ($d), qq{$d: },
-#                ($ast->is_literal ? qq{$node_id: '$children[0]'} : $node_id);
-
-            $parents->[ $d + 1 ] = $parents->[ $d ]->append_child(
-                MarpaX::Regex::AST->new( $ast->is_literal ? $ast : $node_id ) );
-        }
-    }; ## opts
-
-    $ast->walk( $opts );
-
-    return $root;
 }
 
 # set local Data::Dumper options as return Data::Dumper::Dumper($ast)
