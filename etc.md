@@ -92,6 +92,9 @@ Priorities
     via literals?
 
   compile to Marpa::R2 for long strings and/or hard regexes
+    () capture groups must be compiled to rules with
+    unique LHSes to ensure searchibility, e.g. <capture group 1>
+    they must have lexeme semantics -- input span: literal, start, length
     external lexing
     lexemes
       literals, charclasses and symbolless groups
@@ -115,6 +118,7 @@ Priorities
         <digit>           ::= \d
 
   more test/use cases
+    http://stackoverflow.com/questions/30902235/how-to-solve-an-error-related-to-creating-parser-from-regex
     http://stackoverflow.com/questions/30633258/complex-string-splitting
     http://www.reddit.com/r/perl/comments/36hy9g/proper_parsing_filepath_parse/
     http://www.reddit.com/r/perl/comments/35c2cm/a_regex_statement_that_isnt_working_properly/
@@ -138,29 +142,6 @@ Priorities
 
   abstract distill()
     parent/child pairs
-
-= ast
-
-  $ast->child(ast->IX_BEFORE_FIRST, $child);
-  $ast->child(ast->IX_AFTER_LAST, $child);
-  $ast->child(sub{ $_->[0] eq 'bracketed name' }, $child);
-  my ($child, $ix) = $ast->child( sub{ $_->[0] eq 'bracketed name' } );
-  my (undef, $ix) = $ast->child( sub{ $_->[0] eq 'bracketed name' } );
-
-  iterator
-    selector
-    action
-    modifying
-    non-modidying -- reverse
-
-  id()
-  child(index_or_predicate)
-    first_child()
-    last_child()
-  children()
-  append_child(MarpaX::Regex::AST)
-  remove_child(index_or_predicate)
-  replace_child(index_or_predicate, MarpaX::Regex::AST)
 
 use cases
   Building regexp as a rewriting system
