@@ -295,7 +295,7 @@ sub substitute{
 
     $ast->merge();
 
-#    warn "# with NO symbols expandd:\n", $ast->sprint;
+#    warn "# with NO symbols expanded:\n", $ast->sprint;
 
     while (1){
         my $symbols = $ast->symbols();
