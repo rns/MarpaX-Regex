@@ -105,7 +105,7 @@ sub merge{
                     }
                     else{
                         # mark for removal
-                        $ast->child( 1, MarpaX::Regex::AST->new( '#removable' ) );
+                        $ast->child( 1, MarpaX::Regex::AST->new( [ '#removable' ] ) );
                     }
                 }
             }
