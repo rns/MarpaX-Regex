@@ -30,7 +30,7 @@ sub concat{
     $opts->{visit} = sub {
         my ($ast, $context) = @_;
         my ($node_id, @children) = @$ast;
-        my $indent = $opts->{indent} x ( $context->{depth} - 1 );
+        my $indent = $opts->{indent} x $context->{depth};
 
         if ($node_id eq 'lhs' or $node_id eq 'alternatives'){
             $parent_node_id = $node_id;
