@@ -132,6 +132,7 @@ sub parse{
     return ${ $self->{slg}->parse( \$source ) };
 }
 
+# todo: add compile targets: p5regex or SLIF
 sub compile{
     my ($self, $ast) = @_;
     $ast = MarpaX::Regex::AST->new($ast);

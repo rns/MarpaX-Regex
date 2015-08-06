@@ -12,34 +12,6 @@ $Data::Dumper::Terse = 1;
 use MarpaX::Regex;
 use MarpaX::Regex::AST;
 
-=head2 todos:
-
-    predicates (child, descendant, sibling)
-
-    distill (produce new MarpaX::(Regex::)AST tree with skip => \@nodes skipped
-
-        'skip' must affect named literals, e.g.
-        collapse name/literal axis by pruning intermediate nodes up to named literal, e.g.
-            ['symbol',['symbol name',['bare name','digit']]]
-        prune('symbol', 'bare name') => ['symbol', 'digit' ]
-
-        unwind recursion to arrays
-
-    start/length -- (un)pack node to hash ref according to
-        { key => index } mapping passed as an option, e.g.
-        { name => 0, start => 1, length => 2, value => 3 }
-            for
-                [ name, start, length, value ]
-
-    block vs. span (increasing/non-increasing depth) in sprint
-
-    handlers
-
-    cut, paste, copy
-    filter
-
-=cut
-
 # following http://perldoc.perl.org/perlretut.html
 # Regex BNF source, input string, scalar-context match, list-context match, desc
 my $tests = [
