@@ -16,6 +16,11 @@ use lib q{../../MarpaX-AST/lib};
 
 use parent 'MarpaX::AST';
 
+sub second_child{
+    my ($ast, $child) = @_;
+    return $ast->child(1, $child);
+}
+
 sub concat{
     my ($ast, $opts ) = @_;
 
@@ -65,7 +70,7 @@ sub merge{
             my ($ast) = @_;
             if ($ast->id eq 'statement'){
                 my $lhs          = $ast->descendant(2)->first_child();
-                my $alternatives = $ast->child(1);
+                my $alternatives = $ast->second_child();
                 push @{ $alternatives_by_lhs{ $lhs } }, $alternatives;
             }
         }
@@ -99,13 +104,13 @@ sub merge{
                 my $lhs = $ast->descendant(2)->first_child();
                 if ( exists $mergeable_alternatives{ $lhs } ){
                     if (defined $mergeable_alternatives{ $lhs }){
-#                        warn "# first occurrence of $lhs:\n", $ast->child(1)->sprint;
-                        $ast->child( 1, $mergeable_alternatives{ $lhs } );
+#                        warn "# first occurrence of $lhs:\n", $ast->second_child()->sprint;
+                        $ast->second_child( $mergeable_alternatives{ $lhs } );
                         $mergeable_alternatives{ $lhs } = undef;
                     }
                     else{
                         # mark for removal
-                        $ast->child( 1, MarpaX::Regex::AST->new( [ '#removable' ] ) );
+                        $ast->second_child( MarpaX::Regex::AST->new( [ '#removable' ] ) );
                     }
                 }
             }
@@ -114,7 +119,7 @@ sub merge{
     $ast->walk( $opts );
 
     # remove statements whose alternatives have been just marked
-    $ast->remove_children(sub{ $_[0]->child(1)->id eq '#removable' });
+    $ast->remove_children(sub{ $_[0]->second_child()->id eq '#removable' });
 
     return $ast;
 }
@@ -132,7 +137,7 @@ sub symbols{
             return 1 unless $ast->id eq 'statement';
             # having no 'bare name' or 'bracketed name' alternatives
             my @symbols = grep { exists $symbol_name{$_->id()} }
-                    @{ $ast->child(1)->children() };
+                    @{ $ast->second_child()->children() };
             return @symbols > 0; # skip non-symbols
         },
         visit => sub {
@@ -152,7 +157,7 @@ sub expand_symbols{
     my %symbols;
     for my $symbol (@$symbols){
         my $symbol_lhs = $symbol->descendant(2)->first_child;
-        my $symbol_alternatives = $symbol->child(1)->children;
+        my $symbol_alternatives = $symbol->second_child()->children;
 #        warn Dumper $symbol_alternatives;
 #        warn "# to be expanded: $symbol_lhs:\n", $symbol->sprint;
         $symbols{$symbol_lhs} = $symbol_alternatives;
@@ -167,7 +172,7 @@ sub expand_symbols{
                 my $lhs = $ast->descendant(2)->first_child();
 #                warn "#stat $lhs:\n", $ast->dump;
                 return if exists $symbols{ $lhs }; # don't expand itself
-                my $alternatives = $ast->child(1)->children;
+                my $alternatives = $ast->second_child()->children;
                 # in reverse order to splice() from the end
                 for (my $ix = @$alternatives - 1; $ix >= 0; $ix--){
                     my $alternative = $alternatives->[$ix];
@@ -177,7 +182,7 @@ sub expand_symbols{
                         my $symbol = $alternative->first_child();
                         if (exists $symbols{ $symbol } ){
 #                            warn "# $ix-th alternative '$symbol' needs expanding:\n", $ast->[2]->[$ix+1]->sprint;
-                            $ast->child(1)->child ( $ix, $symbols{ $symbol } );
+                            $ast->second_child()->child ( $ix, $symbols{ $symbol } );
                             $removable_symbols->{ $symbol }++;
                         }
                     }
@@ -236,7 +241,7 @@ sub recurse{
             if ($ast->id eq 'statement'){
 #                warn "# recurse:\n", $ast->sprint;
                 my $lhs = $ast->descendant(2)->first_child();
-                my $alternatives = $ast->child(1);
+                my $alternatives = $ast->second_child();
                 my $count = 0;
                 # find recursions: references to $lhs in statement's alternatives
                 for my $ix (0 .. $alternatives->children_count() - 1){
