@@ -64,6 +64,7 @@ sub merge{
     my ($ast) = @_;
 
 #   gather all statements having the same lhs
+# todo: consider method gather($hash_ref, { key => sub {}, visit => sub {} })
     my %alternatives_by_lhs;
     my $opts = {
         visit => sub {
@@ -128,6 +129,7 @@ sub merge{
 sub symbols{
     my ($ast) = @_;
 
+# todo: consider method gather($array_ref, visit => sub {})
     my %symbol_name = map { $_ => 1 } ('bare name', 'bracketed name');
     my @symbols;
     my $opts = {
