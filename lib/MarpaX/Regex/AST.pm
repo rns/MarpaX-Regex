@@ -16,11 +16,6 @@ use lib q{../../MarpaX-AST/lib};
 
 use parent 'MarpaX::AST';
 
-sub second_child{
-    my ($ast, $child) = @_;
-    return $ast->child(1, $child);
-}
-
 sub concat{
     my ($ast, $opts ) = @_;
 
@@ -268,7 +263,7 @@ sub recurse{
                     if (
                             $alternatives->first_child->is_literal
                         and $alternatives->last_child->is_literal
-                        and $alternatives->first_child->first_child eq '('
+                        and $alternatives->first_grandchild eq '('
                         and $alternatives->last_child->first_child eq ')'
                     ){
 #                        warn "capture group";
