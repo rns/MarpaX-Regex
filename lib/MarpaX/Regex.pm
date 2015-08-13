@@ -11,6 +11,8 @@ $Data::Dumper::Indent = 1;
 $Data::Dumper::Terse = 1;
 $Data::Dumper::Deepcopy = 1;
 
+use Carp;
+
 use MarpaX::Regex::AST;
 
 my $dsl = q{;
@@ -105,8 +107,13 @@ lexeme default = action => [ name, values ] latm => 1
 
 };
 
+use constant TARGET_P5REGEX => 'p5regex';
+use constant TARGET_SLIF    => 'slif';
+
 sub new {
     my ($class, $source, $target) = @_;
+
+    $target //= TARGET_P5REGEX;
 
     my $self = {};
     my $slg = Marpa::R2::Scanless::G->new( { source => \$dsl } );
@@ -135,8 +142,20 @@ sub parse{
 # todo: add compile targets: p5regex or SLIF
 sub compile{
     my ($self, $ast, $target) = @_;
-    $ast = MarpaX::Regex::AST->new($ast);
-    return $ast->distill->substitute->recurse->concat();
+
+    $target //= TARGET_P5REGEX;
+
+    if ($target eq TARGET_P5REGEX){
+        $ast = MarpaX::Regex::AST->new($ast);
+        return $ast->distill->substitute->recurse->concat();
+    }
+    elsif ($target eq TARGET_SLIF){
+        croak "compile to $target unimpelemented";
+    }
+    else{
+        croak "Compile target must be " . TARGET_SLIF . " or " . TARGET_P5REGEX .
+            " not $target";
+    }
 }
 
 sub parse_debug{
