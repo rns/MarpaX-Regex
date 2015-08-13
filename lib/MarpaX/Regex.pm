@@ -106,7 +106,7 @@ lexeme default = action => [ name, values ] latm => 1
 };
 
 sub new {
-    my ($class, $source) = @_;
+    my ($class, $source, $target) = @_;
 
     my $self = {};
     my $slg = Marpa::R2::Scanless::G->new( { source => \$dsl } );
@@ -120,7 +120,7 @@ sub new {
             warn "# Parse failure:\n" . $self->parse_debug($source);
             return;
         }
-        return $self->compile( $ast );
+        return $self->compile( $ast, $target );
     }
 
     return $self;
@@ -134,7 +134,7 @@ sub parse{
 
 # todo: add compile targets: p5regex or SLIF
 sub compile{
-    my ($self, $ast) = @_;
+    my ($self, $ast, $target) = @_;
     $ast = MarpaX::Regex::AST->new($ast);
     return $ast->distill->substitute->recurse->concat();
 }

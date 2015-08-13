@@ -46,7 +46,7 @@ Priorities
   NO quotemeta on literals -- quoting is left to application
     in concat()
 
-=====the=above=are=done=by=saying=NO=to=them===
+=====the=above=priorities=are=done=by=saying=NO=to=them===
 
   Swartz json regex cannot be built with symbol expansion,
     only with recurse (?&NAME) groups, which seems to be questionable to support
@@ -118,6 +118,7 @@ Priorities
         <digit>           ::= \d
 
   more test/use cases
+    hard regex -- compile to marpa http://stackoverflow.com/questions/31954223/how-to-remove-text-between-a-pair-of-substrings-in-python-when-the-string-is-ver
     http://stackoverflow.com/questions/30902235/how-to-solve-an-error-related-to-creating-parser-from-regex
     http://stackoverflow.com/questions/30633258/complex-string-splitting
     http://www.reddit.com/r/perl/comments/36hy9g/proper_parsing_filepath_parse/
