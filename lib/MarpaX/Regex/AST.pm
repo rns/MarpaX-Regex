@@ -353,8 +353,6 @@ sub rules{
             '$'
             '^' ... '$' nulled rules (markers, which, on event completed,
             must correspond to the start and the end of the input
-        recursions
-            -- substitute symbols?
         zero-width assertions
 
 =cut

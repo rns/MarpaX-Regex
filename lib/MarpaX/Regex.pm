@@ -25,6 +25,7 @@ lexeme default = action => [ name, values ] latm => 1
     metacharacter       ~ '^' | '$' | '.' | [\\\\]
     # todo: unicode -- \p{}
     # todo: add other character escapes
+    # todo: split into classes, e.g assertions and shortcuts
     <character escape>  ~
     # (non)digits, alphanumerics, whitespaces,
     '\d' | '\D' | '\w' | '\W' | '\s' | '\S' |
