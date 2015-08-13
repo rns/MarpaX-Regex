@@ -67,21 +67,21 @@ lexeme default = action => [ name, values ] latm => 1
     # grouping and alternation
     primary ::= literal
               | <character class>
-              | <character class> quantifier
+              | <character class> quantifier name => 'quantified character class'
               | symbol
-              | symbol quantifier
+              | symbol quantifier name => 'quantified symbol'
               | <character escape>
-              | <character escape> quantifier
+              | <character escape> quantifier name => 'quantified character escape'
               | metacharacter
 # uncomment the below 2 lines to allow empty groups (null regex)
               | alternation
     alternation         ~ '|'
 
     group ::= primary
-            | '(?:' group ')' quantifier assoc => group
-            | '(?:' group ')' assoc => group
-            | '(' group ')' quantifier assoc => group
-            | '(' group ')' assoc => group
+            | '(?:' group ')' quantifier assoc => group name => 'capturing group'
+            | '(?:' group ')' assoc => group  name => 'capturing group'
+            | '(' group ')' quantifier assoc => group name => 'capturing group'
+            | '(' group ')' assoc => group name => 'capturing group'
            || group group       # and
 # comment out the below line to allow empty groups (null regex)
 #           || group '|' group   # or
@@ -150,7 +150,8 @@ sub compile{
         return $ast->distill->substitute->recurse->concat();
     }
     elsif ($target eq TARGET_SLIF){
-        croak "compile to $target unimpelemented";
+        $ast = MarpaX::Regex::AST->new($ast);
+        return $ast->rules();
     }
     else{
         croak "Compile target must be " . TARGET_SLIF . " or " . TARGET_P5REGEX .

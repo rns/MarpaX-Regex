@@ -70,8 +70,11 @@ for my $test (@$tests){
     my $value = eval { $rex->parse($source) };
     ok !$@, 'Regex BNF parsed';
 
-    my $regex = MarpaX::Regex::AST->new( $value )
-        ->distill()->substitute()->recurse()->concat();
+    my $ast = MarpaX::Regex::AST->new( $value );
+
+    my $regex = $ast->distill()->substitute()->recurse()->concat();
+
+    my $slif = $rex->compile( $value, MarpaX::Regex::TARGET_SLIF );
 
     diag "BNF:\n$source" unless $ENV{HARNESS_ACTIVE};
     eq_or_diff $regex, $expected_regex, "distill()->substitute()->recurse()->concat(), $desc";

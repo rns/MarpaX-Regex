@@ -316,13 +316,30 @@ sub distill{
         root => 'statements',
         skip => [
             'statements',
-            'group', 'primary',
+            'group', 'capturing group', 'primary',
             'alternative rule',
             'symbol', 'symbol name',
+            'quantified character class', 'quantified symbol', 'quantified character escape',
             'character class', 'literal'
         ]
     });
 
+}
+
+# build SLIF rules from $ast
+sub rules{
+    my ($ast) = @_;
+    $ast = $ast->SUPER::distill({
+        root => 'statements',
+        # todo: don't skip capture groups: first_child '(' last child ')'
+        skip => [
+            'statements',
+            'group', 'primary', 'alternative rule',
+            'symbol', 'symbol name',
+            'character class', 'literal'
+        ]
+    });
+    warn "# rules:\n", $ast->sprint;
 }
 
 # set local Data::Dumper options as return Data::Dumper::Dumper($ast)
