@@ -12,7 +12,7 @@ use Carp;
 use Scalar::Util qw{ blessed };
 
 # todo: remove once MarpaX-AST is released; for prove use -I../MarpaX-AST/lib
-use lib q{../../MarpaX-AST/lib};
+use lib q{/home/Ruslan/MarpaX-AST/lib};
 
 use parent 'MarpaX::AST';
 
