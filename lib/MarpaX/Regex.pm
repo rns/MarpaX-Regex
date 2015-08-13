@@ -23,12 +23,13 @@ lexeme default = action => [ name, values ] latm => 1
 
     # bottom to top: char, literal, charclass, symbol, grouping/alternation, statement
     metacharacter       ~ '^' | '$' | '.' | [\\\\]
+    # todo: unicode -- \p{}
     # todo: add other character escapes
     <character escape>  ~
     # (non)digits, alphanumerics, whitespaces,
     '\d' | '\D' | '\w' | '\W' | '\s' | '\S' |
-    # recursions
-    '\1' |
+    # recursions -- todo: include in regex grammar for pretty-printing
+#    '\1' |
     # zero-width assertions
     '\b' | '\B' | '\A' | '\z' | '\Z'
 
@@ -78,9 +79,9 @@ lexeme default = action => [ name, values ] latm => 1
     alternation         ~ '|'
 
     group ::= primary
-            | '(?:' group ')' quantifier assoc => group name => 'capturing group'
-            | '(?:' group ')' assoc => group  name => 'capturing group'
-            | '(' group ')' quantifier assoc => group name => 'capturing group'
+            | '(?:' group ')' quantifier assoc => group name => 'quantified non-capturing group'
+            | '(?:' group ')' assoc => group  name => 'non-capturing group'
+            | '(' group ')' quantifier assoc => group name => 'quantified capturing group'
             | '(' group ')' assoc => group name => 'capturing group'
            || group group       # and
 # comment out the below line to allow empty groups (null regex)

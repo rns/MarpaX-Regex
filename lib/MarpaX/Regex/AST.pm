@@ -316,8 +316,9 @@ sub distill{
         root => 'statements',
         skip => [
             'statements',
-            'group', 'capturing group', 'primary',
-            'alternative rule',
+            'group', 'capturing group', 'quantified capturing group',
+            'quantified non-capturing group', 'non-capturing group',
+            'primary', 'alternative rule',
             'symbol', 'symbol name',
             'quantified character class', 'quantified symbol', 'quantified character escape',
             'character class', 'literal'
@@ -331,7 +332,6 @@ sub rules{
     my ($ast) = @_;
     $ast = $ast->SUPER::distill({
         root => 'statements',
-        # todo: don't skip capture groups: first_child '(' last child ')'
         skip => [
             'statements',
             'group', 'primary', 'alternative rule',
@@ -339,6 +339,26 @@ sub rules{
             'character class', 'literal'
         ]
     });
+=pod
+    create symbols/rules for
+        capturing groups
+        sequences:
+            'quantified character class', 'quantified symbol', 'quantified character escape'
+        quantifiers:
+            - only ? + * and { }
+            - non-greedy and non-capturing quantifier modifiers (? and +)
+              must produce a warning
+        metacharacters
+            '^'
+            '$'
+            '^' ... '$' nulled rules (markers, which, on event completed,
+            must correspond to the start and the end of the input
+        recursions
+            -- substitute symbols?
+        zero-width assertions
+
+=cut
+
     warn "# rules:\n", $ast->sprint;
 }
 
