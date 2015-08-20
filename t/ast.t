@@ -74,7 +74,10 @@ for my $test (@$tests){
 
     my $regex = $ast->distill()->substitute()->recurse()->concat();
 
+SKIP: {
+    skip "unimplemented", 1;
     my $slif = $rex->compile( $value, MarpaX::Regex::TARGET_SLIF );
+}
 
     diag "BNF:\n$source" unless $ENV{HARNESS_ACTIVE};
     eq_or_diff $regex, $expected_regex, "distill()->substitute()->recurse()->concat(), $desc";
