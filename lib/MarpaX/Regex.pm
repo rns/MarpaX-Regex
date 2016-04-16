@@ -109,13 +109,13 @@ lexeme default = action => [ name, values ] latm => 1
 
 };
 
-use constant TARGET_P5REGEX => 'p5regex';
-use constant TARGET_SLIF    => 'slif';
+use constant TARGET_PERL_REGEX => 'perl_regex';
+use constant TARGET_MARPA_NAIF    => 'marpa_naif';
 
 sub new {
     my ($class, $source, $target) = @_;
 
-    $target //= TARGET_P5REGEX;
+    $target //= TARGET_PERL_REGEX;
 
     my $self = {};
     my $slg = Marpa::R2::Scanless::G->new( { source => \$dsl } );
@@ -141,22 +141,21 @@ sub parse{
     return ${ $self->{slg}->parse( \$source ) };
 }
 
-# todo: add compile targets: p5regex or SLIF
 sub compile{
     my ($self, $ast, $target) = @_;
 
-    $target //= TARGET_P5REGEX;
+    $target //= TARGET_PERL_REGEX;
 
-    if ($target eq TARGET_P5REGEX){
+    if ($target eq TARGET_PERL_REGEX){
         $ast = MarpaX::Regex::AST->new($ast);
         return $ast->distill->substitute->recurse->concat();
     }
-    elsif ($target eq TARGET_SLIF){
+    elsif ($target eq TARGET_MARPA_NAIF){
         $ast = MarpaX::Regex::AST->new($ast);
         return $ast->rules();
     }
     else{
-        croak "Compile target must be " . TARGET_SLIF . " or " . TARGET_P5REGEX .
+        croak "Compile target must be " . TARGET_MARPA_NAIF . " or " . TARGET_PERL_REGEX .
             " not $target";
     }
 }

@@ -76,7 +76,7 @@ for my $test (@$tests){
 
 SKIP: {
     skip "unimplemented", 1;
-    my $slif = $rex->compile( $value, MarpaX::Regex::TARGET_SLIF );
+    my $naif = $rex->compile( $value, MarpaX::Regex::TARGET_MARPA_NAIF );
 }
 
     diag "BNF:\n$source" unless $ENV{HARNESS_ACTIVE};

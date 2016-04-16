@@ -327,7 +327,7 @@ sub distill{
 
 }
 
-# build SLIF rules from $ast
+# build NAIF rules from $ast
 sub rules{
     my ($ast) = @_;
     $ast = $ast->SUPER::distill({
