@@ -124,7 +124,7 @@ sub new {
     bless $self, $class;
 
     if ( defined $source ){
-        my $ast = eval { $self->parse($source) };
+        my $ast = eval { $self->parse_BNFish($source) };
         if ($@){
             warn "# Parse failure:\n" . $self->parse_debug($source);
             return;
@@ -135,7 +135,8 @@ sub new {
     return $self;
 }
 
-sub parse{
+# parses BNFish regex source
+sub parse_BNFish{
     my ($self, $source) = @_;
 
     return ${ $self->{slg}->parse( \$source ) };
@@ -152,12 +153,16 @@ sub compile{
     }
     elsif ($target eq TARGET_MARPA_NAIF){
         $ast = MarpaX::Regex::AST->new($ast);
-        return $ast->rules();
+        return $ast->naif_grammar();
     }
     else{
         croak "Compile target must be " . TARGET_MARPA_NAIF . " or " . TARGET_PERL_REGEX .
             " not $target";
     }
+}
+
+sub parse{
+    my ($self, $naif_grammar, $input) = @_;
 }
 
 sub parse_debug{

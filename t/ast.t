@@ -12,6 +12,8 @@ $Data::Dumper::Terse = 1;
 use MarpaX::Regex;
 use MarpaX::Regex::AST;
 
+# todo: make this an author test: it uses private methods
+
 # following http://perldoc.perl.org/perlretut.html
 # Regex BNF source, input string, scalar-context match, list-context match, desc
 my $tests = [
@@ -67,7 +69,7 @@ for my $test (@$tests){
 
     # must parse unambiguously unless parse error is expected
     my $rex = MarpaX::Regex->new;
-    my $value = eval { $rex->parse($source) };
+    my $value = eval { $rex->parse_BNFish($source) };
     ok !$@, 'Regex BNF parsed';
 
     my $ast = MarpaX::Regex::AST->new( $value );

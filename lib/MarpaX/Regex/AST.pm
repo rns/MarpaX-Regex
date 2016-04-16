@@ -328,7 +328,7 @@ sub distill{
 }
 
 # build NAIF rules from $ast
-sub rules{
+sub naif_grammar{
     my ($ast) = @_;
     $ast = $ast->SUPER::distill({
         root => 'statements',
@@ -340,6 +340,7 @@ sub rules{
         ]
     });
 =pod
+	extract terminals
     create symbols/rules for
         capturing groups
         sequences:
